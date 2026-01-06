@@ -2,6 +2,8 @@
 
 A runtime boundary system for exposing controlled capabilities and sensory streams to external cognitive systems.
 
+**Built for distributed agents, not monoliths.** A capsule is a secure environment that agents remotely inhabit. Instead of streaming commands back and forth, agents invoke discrete operations while continuous sensory stimuli stream unidirectionally to the agent. This architecture enables agents to selectively attend to ambient input and react to environmental changes without polling.
+
 ## What It Solves
 
 Capsuleer provides a type-safe, auditable interface between intelligence (LLMs, agents, reasoning systems) and the real world. It solves:
