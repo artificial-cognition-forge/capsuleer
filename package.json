@@ -1,8 +1,22 @@
 {
   "name": "capsule",
-  "module": "index.ts",
+  "version": "0.0.1",
+  "description": "Type-safe capability-based architecture for building modular systems",
   "type": "module",
-  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "files": [
+    "index.ts",
+    "src/**/*.ts",
+    "types/**/*.ts"
+  ],
+  "private": false,
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -13,5 +27,12 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
-  }
+  },
+  "keywords": [
+    "typescript",
+    "capabilities",
+    "architecture",
+    "modularity",
+    "type-safe"
+  ]
 }

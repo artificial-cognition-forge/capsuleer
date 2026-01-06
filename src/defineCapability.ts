@@ -1,4 +1,4 @@
-import type { CapabilityDef, OperationsMap } from "@types/mod"
+import type { CapabilityDef, OperationsMap } from "../types/mod.js"
 
 /**
  * Helper to define a capability with type preservation.

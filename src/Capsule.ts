@@ -10,7 +10,7 @@ import type {
     ExtractOperationReturn,
     OperationMiddleware,
     MiddlewareResult
-} from "@types/mod"
+} from "../types/mod.js"
 
 type CapsuleState = "created" | "booted" | "shutdown"
 

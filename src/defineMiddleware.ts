@@ -1,4 +1,4 @@
-import type { OperationMiddleware } from "@types/mod"
+import type { OperationMiddleware } from "../types/mod.js"
 
 /**
  * Helper to define middleware.

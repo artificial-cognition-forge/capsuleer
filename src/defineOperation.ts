@@ -1,4 +1,4 @@
-import type { OperationDef } from "@types/mod"
+import type { OperationDef } from "../types/mod.js"
 
 /**
  * Helper to define a type-safe operation.
