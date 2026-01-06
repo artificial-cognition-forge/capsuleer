@@ -47,6 +47,19 @@ await capsule.boot()
 const content = await capsule.invoke('files', 'read', { path: './data.txt' })
 ```
 
+## Key Topics
+
+**Core Concepts**
+- [Capsule](./docs/capsule.md) - Runtime container and lifecycle management
+- [Capabilities](./docs/capabilities.md) - Type-safe operation definitions
+- [Middleware](./docs/middleware.md) - Policy enforcement and interception
+- [Stimuli](./docs/stimuli.md) - One-way sensory event streams
+- [Lifecycle](./docs/lifecycle.md) - Boot/shutdown hooks and state transitions
+
+**Reference**
+- [Invariants](./docs/invariants.md) - Runtime guarantees and constraints
+- [Minimal Example](./docs/examples/minimal.md) - Complete working example
+
 ## License
 
 MIT
