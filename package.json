@@ -14,7 +14,8 @@
   "files": [
     "index.ts",
     "src/**/*.ts",
-    "types/**/*.ts"
+    "types/**/*.ts",
+    "README.md"
   ],
   "private": false,
   "devDependencies": {
