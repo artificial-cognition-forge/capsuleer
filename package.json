@@ -1,6 +1,6 @@
 {
   "name": "@thehexlabs/capsuleer",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Type-safe capability-based architecture for building modular systems",
   "type": "module",
   "main": "./index.ts",
