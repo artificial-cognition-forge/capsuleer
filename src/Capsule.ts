@@ -10,7 +10,7 @@ import type {
     ExtractOperationReturn,
     OperationMiddleware,
     MiddlewareResult
-} from "./SPECIFICATION"
+} from "@types/mod"
 
 type CapsuleState = "created" | "booted" | "shutdown"
 

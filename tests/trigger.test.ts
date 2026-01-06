@@ -12,7 +12,7 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, collectStimuli, assertRejects } from "./helpers"
+import { createTestCapsule, collectStimuli, assertRejects } from "@tests/helpers"
 
 describe("Operation Invocation (trigger)", () => {
     test("trigger() invokes correct operation handler", async () => {

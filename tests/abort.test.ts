@@ -11,8 +11,8 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, createAbortableOperation, assertRejects, sleep } from "./helpers"
-import { defineMiddleware } from "../src/exports"
+import { createTestCapsule, createAbortableOperation, assertRejects, sleep } from "@tests/helpers"
+import { defineMiddleware } from "@src/exports"
 
 describe("Interruptibility (AbortSignal)", () => {
     test("external abort signal propagates to middleware", async () => {

@@ -10,8 +10,8 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, collectStimuli, assertRejects } from "./helpers"
-import { Capsule, defineCapability, defineOperation } from "../src/exports"
+import { createTestCapsule, collectStimuli, assertRejects } from "@tests/helpers"
+import { Capsule, defineCapability, defineOperation } from "@src/exports"
 
 describe("Lifecycle Hooks", () => {
     test("boot() hook is called during boot", async () => {

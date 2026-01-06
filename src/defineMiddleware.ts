@@ -1,4 +1,4 @@
-import type { OperationMiddleware } from "./SPECIFICATION"
+import type { OperationMiddleware } from "@types/mod"
 
 /**
  * Helper to define middleware.

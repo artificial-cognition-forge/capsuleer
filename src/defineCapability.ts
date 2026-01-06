@@ -1,4 +1,4 @@
-import type { CapabilityDef, OperationsMap } from "./SPECIFICATION"
+import type { CapabilityDef, OperationsMap } from "@types/mod"
 
 /**
  * Helper to define a capability with type preservation.

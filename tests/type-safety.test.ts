@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { Capsule, defineCapability, defineOperation } from "../src/exports"
+import { Capsule, defineCapability, defineOperation } from "@src/exports"
 
 describe("Type Safety", () => {
     test("valid trigger calls compile successfully", async () => {

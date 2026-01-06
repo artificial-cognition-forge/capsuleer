@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { Capsule, defineCapability, defineOperation } from "../src/exports"
+import { Capsule, defineCapability, defineOperation } from "@src/exports"
 
 describe("Metadata Introspection", () => {
     test("describe() returns correct capsule name", async () => {

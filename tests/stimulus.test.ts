@@ -12,7 +12,7 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, collectStimuli, waitForStimulus } from "./helpers"
+import { createTestCapsule, collectStimuli, waitForStimulus } from "@tests/helpers"
 
 describe("Stimulus Emission", () => {
     test("emit() from handler delivers stimulus to subscribers", async () => {

@@ -13,7 +13,7 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, assertRejects } from "./helpers"
+import { createTestCapsule, assertRejects } from "@tests/helpers"
 
 describe("Capsule Lifecycle", () => {
     test("capsule starts in created state (trigger throws)", async () => {

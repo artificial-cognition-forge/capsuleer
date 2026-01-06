@@ -9,8 +9,8 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { Capsule, defineCapability, defineOperation, defineMiddleware } from "../src/exports"
-import { collectStimuli, assertRejects } from "./helpers"
+import { Capsule, defineCapability, defineOperation, defineMiddleware } from "@src/exports"
+import { collectStimuli, assertRejects } from "@tests/helpers"
 
 describe("Operation-level Middleware", () => {
     test("operation middleware runs after capsule middleware", async () => {

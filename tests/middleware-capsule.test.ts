@@ -12,8 +12,8 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, collectStimuli, assertRejects, trackMiddlewareInvocations } from "./helpers"
-import { defineMiddleware } from "../src/exports"
+import { createTestCapsule, collectStimuli, assertRejects, trackMiddlewareInvocations } from "@tests/helpers"
+import { defineMiddleware } from "@src/exports"
 
 describe("Capsule-level Middleware", () => {
     test("capsule middleware runs before operation handler", async () => {

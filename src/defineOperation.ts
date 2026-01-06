@@ -1,4 +1,4 @@
-import type { OperationDef } from "./SPECIFICATION"
+import type { OperationDef } from "@types/mod"
 
 /**
  * Helper to define a type-safe operation.

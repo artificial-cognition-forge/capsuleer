@@ -11,8 +11,8 @@
  */
 
 import { describe, test, expect } from "bun:test"
-import { createTestCapsule, assertRejects } from "./helpers"
-import { defineMiddleware } from "../src/exports"
+import { createTestCapsule, assertRejects } from "@tests/helpers.ts"
+import { defineMiddleware } from "@src/exports.ts"
 
 describe("Error Handling", () => {
     test("handler errors propagate to trigger() caller", async () => {

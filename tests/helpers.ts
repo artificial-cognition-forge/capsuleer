@@ -7,8 +7,8 @@
  * - Always cleanup resources
  */
 
-import { Capsule, defineCapability, defineOperation, defineMiddleware } from "../src/exports"
-import type { Stimulus, CapsuleInstance, CapsuleDef, OperationMiddleware } from "../src/SPECIFICATION"
+import { Capsule, defineCapability, defineOperation, defineMiddleware } from "@src/exports"
+import type { Stimulus, CapsuleInstance, CapsuleDef, OperationMiddleware } from "@types/mod"
 
 /**
  * Collect all stimuli emitted by a capsule.

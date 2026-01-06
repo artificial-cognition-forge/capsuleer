@@ -1,9 +1,9 @@
-export { Capsule } from "./Capsule"
-export * from "./defineCapability"
-export * from "./defineMiddleware"
-export * from "./defineOperation"
+export { Capsule } from "@src/Capsule"
+export * from "@src/defineCapability"
+export * from "@src/defineMiddleware"
+export * from "@src/defineOperation"
 
-// Export types from SPECIFICATION (but not the duplicate function definitions)
+// Export all types from the type system
 export type {
     OperationInvocationContext,
     OperationExecutionContext,
@@ -30,4 +30,4 @@ export type {
     ExtractOperationReturn,
     CapsuleInstance,
     CapsuleMetadata
-} from "./SPECIFICATION"
+} from "@types/mod"
