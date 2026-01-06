@@ -1,5 +1,5 @@
 {
-  "name": "@hexlabs/capsuleer",
+  "name": "@thehexlabs/capsuleer",
   "version": "0.0.2",
   "description": "Type-safe capability-based architecture for building modular systems",
   "type": "module",
