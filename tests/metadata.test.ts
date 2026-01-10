@@ -13,6 +13,18 @@ import { describe, test, expect } from "bun:test"
 import { Capsule, defineCapability, defineOperation } from "@src/exports"
 
 describe("Metadata Introspection", () => {
+    test("describe() returns unique capsule id", async () => {
+        const capsule = Capsule({
+            name: "test-capsule",
+            capabilities: []
+        })
+
+        const metadata = capsule.describe()
+        expect(metadata.id).toBeDefined()
+        expect(typeof metadata.id).toBe("string")
+        expect(metadata.id.length).toBeGreaterThan(0)
+    })
+
     test("describe() returns correct capsule name", async () => {
         const capsule = Capsule({
             name: "test-capsule",
@@ -169,6 +181,7 @@ describe("Metadata Introspection", () => {
         const metadata = capsule.describe()
 
         // Verify structure
+        expect(typeof metadata.id).toBe("string")
         expect(typeof metadata.name).toBe("string")
         expect(typeof metadata.docs).toBe("string")
         expect(Array.isArray(metadata.capabilities)).toBe(true)
@@ -306,6 +319,25 @@ describe("Metadata Introspection", () => {
         expect(metadata1).toEqual(metadata2)
         expect(metadata1.name).toBe("test")
         expect(metadata2.name).toBe("test")
+        expect(metadata1.id).toBe(metadata2.id) // Same capsule instance = same ID
+    })
+
+    test("different capsule instances have different ids", async () => {
+        const capsule1 = Capsule({
+            name: "test",
+            capabilities: []
+        })
+
+        const capsule2 = Capsule({
+            name: "test",
+            capabilities: []
+        })
+
+        const metadata1 = capsule1.describe()
+        const metadata2 = capsule2.describe()
+
+        expect(metadata1.id).not.toBe(metadata2.id) // Different instances = different IDs
+        expect(metadata1.name).toBe(metadata2.name) // But same name
     })
 
     test("describe() works before boot", async () => {

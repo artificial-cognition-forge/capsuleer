@@ -27,9 +27,13 @@ export function Capsule<
     // Track in-flight operations for abort-on-shutdown
     const inFlightOperations = new Set<AbortController>()
 
+    // Generate unique capsule instance ID
+    const capsuleId = `${def.name}-${Math.random().toString(36).slice(2, 11)}`
+
     return {
         describe(): CapsuleMetadata {
             return {
+                id: capsuleId,
                 name: def.name,
                 docs: def.docs,
                 capabilities: def.capabilities.map((cap: any) => ({
@@ -38,7 +42,8 @@ export function Capsule<
                     operations: Object.values(cap.operations).map((op: any) => ({
                         name: op.name,
                         docs: op.docs,
-                        signature: op.signature
+                        signature: op.signature,
+                        kind: op.kind ?? "call"
                     }))
                 })),
                 senses: def.senses

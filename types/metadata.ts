@@ -6,6 +6,7 @@
 
 /** Introspection metadata for the capsule */
 export type CapsuleMetadata = {
+    id: string
     name: string
     docs?: string
     capabilities: {
@@ -15,6 +16,7 @@ export type CapsuleMetadata = {
             name: string
             docs: string
             signature: string
+            kind: "call" | "stream"
         }[]
     }[]
     senses?: {

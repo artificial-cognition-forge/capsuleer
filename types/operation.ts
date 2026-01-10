@@ -80,6 +80,8 @@ export type OperationDef<TParams = unknown, TReturn = unknown> = {
     docs: string
     /** TypeScript signature for introspection */
     signature: string
+    /** Execution shape: "call" for finite operations, "stream" for ongoing operations. Defaults to "call". */
+    kind?: "call" | "stream"
     /** Optional operation-level middleware */
     middleware?: import("./middleware.ts").OperationMiddleware<TParams>[]
     /** The operation handler */
