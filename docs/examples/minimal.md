@@ -30,28 +30,31 @@ const tmux = defineCapability({
   }
 })
 
-// Create a capsule
+// Create a local capsule
 const capsule = Capsule({
-  name: "local-tmux",
-  docs: "Local tmux capsule for terminal multiplexing",
-  capabilities: [tmux] as const,
+  def: {
+    name: "local-tmux",
+    docs: "Local tmux capsule for terminal multiplexing",
+    capabilities: [tmux] as const,
 
-  senses: [
-    {
-      name: "tmux:session:created",
-      docs: "Emitted when a new session is created",
-      signature: "{ id: string; name: string }"
-    }
-  ],
+    senses: [
+      {
+        name: "tmux:session:created",
+        docs: "Emitted when a new session is created",
+        signature: "{ id: string; name: string }"
+      }
+    ],
 
-  hooks: {
-    async boot({ capsule }) {
-      // Setup external streams here
-    },
-    async shutdown({ capsule }) {
-      // Cleanup here
+    hooks: {
+      async boot({ capsule }) {
+        // Setup external streams here
+      },
+      async shutdown({ capsule }) {
+        // Cleanup here
+      }
     }
-  }
+  },
+  transport: 'local'
 })
 
 // Boot the capsule
@@ -78,3 +81,64 @@ await capsule.shutdown()
 // Cleanup subscription
 unsubscribe()
 ```
+
+## Remote SSH Example
+
+The same definition works over SSH with a different transport config:
+
+```typescript
+import { Capsule } from "@hexlabs/capsuleer"
+
+// Same definition as above
+const capsule = Capsule({
+  def: {
+    name: "remote-tmux",
+    capabilities: [tmux] as const,
+    senses: [
+      {
+        name: "tmux:session:created",
+        docs: "Emitted when a new session is created",
+        signature: "{ id: string; name: string }"
+      }
+    ],
+    hooks: {
+      async boot({ capsule }) {},
+      async shutdown({ capsule }) {}
+    }
+  },
+  // Only the transport config differs
+  transport: 'ssh',
+  ssh: {
+    host: 'devbox.example.com',
+    username: 'tmux-user',
+    auth: { type: 'key', path: '~/.ssh/id_rsa' },
+    capsulePath: '/usr/local/bin/capsule'
+  },
+  remoteName: 'remote-tmux'
+})
+
+// Same API: boot, trigger, listen, shutdown
+await capsule.boot()
+
+capsule.onStimulus((stimulus) => {
+  console.log("Stimulus:", stimulus.sense, stimulus.data)
+})
+
+const result = await capsule.trigger(
+  "tmux",
+  "create",
+  { sessionName: "my-session" }
+)
+console.log("Result:", result)
+
+await capsule.shutdown()
+```
+
+The difference from the local example:
+- Capsule runs on a remote machine via SSH
+- Parameters and results are JSON-serialized
+- Stimuli stream back asynchronously
+- Type safety is preserved at compile time
+- No ability to emit stimuli locally (one-way flow)
+
+See [Transports](../transports.md) for detailed configuration options and trade-offs.

@@ -27,7 +27,8 @@ export default defineConfig({
           { text: 'Capabilities', link: '/capabilities' },
           { text: 'Middleware', link: '/middleware' },
           { text: 'Stimuli', link: '/stimuli' },
-          { text: 'Lifecycle', link: '/lifecycle' }
+          { text: 'Lifecycle', link: '/lifecycle' },
+          { text: 'Transports', link: '/transports' }
         ]
       },
       {

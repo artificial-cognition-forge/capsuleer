@@ -23,7 +23,9 @@ Middleware returns one of three results:
 
 Middleware sees only invocation metadata. It has no `emit()` affordance. This prevents middleware from generating sensory events (which are execution-time outputs) and keeps policy enforcement separate from execution.
 
-## Example
+## Examples
+
+### Authorization Check
 
 ```typescript
 import { defineMiddleware } from "@hexlabs/capsuleer"
@@ -32,7 +34,7 @@ const authMiddleware = defineMiddleware({
   name: "auth",
   docs: "Validates authentication tokens",
   async handler({ params, capability, operation, signal }) {
-    const hasPermission = true // auth check
+    const hasPermission = true // check auth token
     if (!hasPermission) {
       return { type: "reject", reason: "Unauthorized" }
     }
@@ -41,9 +43,60 @@ const authMiddleware = defineMiddleware({
 })
 
 // Attach to capsule
-const capsuleDef = Capsule({
-  name: "my-capsule",
-  capabilities: [tmux],
-  middleware: [authMiddleware]
+const capsule = Capsule({
+  def: {
+    name: "my-capsule",
+    capabilities: [tmux],
+    middleware: [authMiddleware]
+  },
+  transport: 'local'
+})
+```
+
+### Parameter Transformation
+
+Transform parameters before they reach the handler (e.g., inject context, normalize input):
+
+```typescript
+const contextMiddleware = defineMiddleware({
+  name: "context-injector",
+  docs: "Adds workspace context to operations",
+  async handler({ params, capability, operation, signal }) {
+    // Inject workspace context into every operation
+    const enhanced = {
+      ...params,
+      workspaceId: "workspace-123"  // Add computed context
+    }
+    return { type: "transform", params: enhanced }
+  }
+})
+```
+
+When a handler is invoked, it receives the transformed parameters:
+
+```typescript
+async handler({ params, emit, signal }) {
+  // params includes injected workspaceId
+  console.log(params.workspaceId)  // "workspace-123"
+}
+```
+
+### Rate Limiting
+
+```typescript
+const rateLimitMiddleware = defineMiddleware({
+  name: "rate-limit",
+  docs: "Limits operations per minute",
+  async handler({ params, capability, operation, signal }) {
+    const key = `${capability}:${operation}`
+    const count = getCallCount(key)  // Track calls
+
+    if (count > MAX_PER_MINUTE) {
+      return { type: "reject", reason: "Rate limit exceeded" }
+    }
+
+    incrementCallCount(key)
+    return { type: "accept" }
+  }
 })
 ```

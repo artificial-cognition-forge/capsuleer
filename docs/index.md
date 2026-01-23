@@ -9,7 +9,7 @@ Capsules are not agents. They do not reason, plan, or decide goals. They are iso
 - **Authority control**: Intelligence should not have direct access to the world. Capsules define what is visible and invokable.
 - **Graded embodiment**: Different capsules expose different levels of sensory richness and capability.
 - **Policy enforcement**: Middleware intercepts invocations before execution, enabling redaction, rate-limiting, and approval flows.
-- **Transport independence**: Capsules are agnostic to WebSockets, HTTP, or IPC. Authority is encoded in capabilities, not transport.
+- **Transport flexibility**: Capsules support both local (in-process) and remote (SSH) execution with identical APIs. Authority is encoded in capabilities, not transport.
 - **Interruptibility**: All operations support cancellation via `AbortSignal`. No runaway execution.
 
 ## Core Guarantees
@@ -29,3 +29,13 @@ This package does **not**:
 - Infer intent or "help" by guessing what the mind wants
 - Manage transport, networking, or authentication
 - Provide a platform or framework—it is a library
+
+## Documentation Guide
+
+**Start here:**
+- **[Minimal Example](./examples/minimal.md)** - Complete working example
+
+**Core concepts:**
+- **[Capsule](./capsule.md)** - Authority boundaries and the unified API
+- **[Middleware](./middleware.md)** - Policy enforcement before operation execution
+- **[Transports](./transports.md)** - Local vs SSH remote execution

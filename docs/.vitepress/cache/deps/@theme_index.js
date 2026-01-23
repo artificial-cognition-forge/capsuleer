@@ -1,17 +1,17 @@
 import {
   useMediaQuery
-} from "./chunk-ZIMNR7NW.js";
+} from "./chunk-7YAD3VRR.js";
 import {
   computed,
   ref,
   shallowRef,
   watch
-} from "./chunk-F2AEDX2F.js";
+} from "./chunk-BKML3YCO.js";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/index.js
+// ../../node_modules/vitepress/dist/client/theme-default/index.js
 import "/home/cody/node_modules/vitepress/dist/client/theme-default/styles/fonts.css";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/without-fonts.js
+// ../../node_modules/vitepress/dist/client/theme-default/without-fonts.js
 import "/home/cody/node_modules/vitepress/dist/client/theme-default/styles/vars.css";
 import "/home/cody/node_modules/vitepress/dist/client/theme-default/styles/base.css";
 import "/home/cody/node_modules/vitepress/dist/client/theme-default/styles/icons.css";
@@ -42,25 +42,25 @@ import { default as default17 } from "/home/cody/node_modules/vitepress/dist/cli
 import { default as default18 } from "/home/cody/node_modules/vitepress/dist/client/theme-default/components/VPTeamPageSection.vue";
 import { default as default19 } from "/home/cody/node_modules/vitepress/dist/client/theme-default/components/VPTeamPageTitle.vue";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/local-nav.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/local-nav.js
 import { onContentUpdated } from "vitepress";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/outline.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/outline.js
 import { getScrollOffset } from "vitepress";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/support/utils.js
+// ../../node_modules/vitepress/dist/client/theme-default/support/utils.js
 import { withBase } from "vitepress";
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/data.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/data.js
 import { useData as useData$ } from "vitepress";
 var useData = useData$;
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/support/utils.js
+// ../../node_modules/vitepress/dist/client/theme-default/support/utils.js
 function ensureStartingSlash(path) {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/support/sidebar.js
+// ../../node_modules/vitepress/dist/client/theme-default/support/sidebar.js
 function getSidebar(_sidebar, path) {
   if (Array.isArray(_sidebar))
     return addBase(_sidebar);
@@ -103,7 +103,7 @@ function addBase(items, _base) {
   });
 }
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/sidebar.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/sidebar.js
 function useSidebar() {
   const { frontmatter, page, theme: theme2 } = useData();
   const is960 = useMediaQuery("(min-width: 960px)");
@@ -160,7 +160,7 @@ function useSidebar() {
   };
 }
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/outline.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/outline.js
 var ignoreRE = /\b(?:VPBadge|header-anchor|footnote-ref|ignore-header)\b/;
 var resolvedHeaders = [];
 function getHeaders(range) {
@@ -225,7 +225,7 @@ function buildTree(data, min, max) {
   return result;
 }
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/composables/local-nav.js
+// ../../node_modules/vitepress/dist/client/theme-default/composables/local-nav.js
 function useLocalNav() {
   const { theme: theme2, frontmatter } = useData();
   const headers = shallowRef([]);
@@ -241,7 +241,7 @@ function useLocalNav() {
   };
 }
 
-// ../../../../../node_modules/vitepress/dist/client/theme-default/without-fonts.js
+// ../../node_modules/vitepress/dist/client/theme-default/without-fonts.js
 var theme = {
   Layout,
   enhanceApp: ({ app }) => {
