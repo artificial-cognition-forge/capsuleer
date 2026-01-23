@@ -7,7 +7,7 @@
  */
 
 import type { CapsuleDef, CapsuleInstance, Stimulus, StimulusHandler } from "../src/types/mod.js"
-import { Capsule } from "../src/Capsule.js"
+import { CapsuleCore } from "../src/Capsule.js"
 import type {
     BootMessage,
     BootResponse,
@@ -39,7 +39,7 @@ export class CapsuleRunner {
     constructor(
         private capsuleDef: CapsuleDef<any, any>,
         private output: Writable
-    ) {}
+    ) { }
 
     /**
      * Handle a boot message
@@ -58,7 +58,7 @@ export class CapsuleRunner {
 
         try {
             // Create capsule instance
-            this.capsule = Capsule(this.capsuleDef)
+            this.capsule = CapsuleCore(this.capsuleDef)
 
             // Set up stimulus forwarding
             this.stimulusUnsubscribe = this.capsule.onStimulus((stimulus) => {

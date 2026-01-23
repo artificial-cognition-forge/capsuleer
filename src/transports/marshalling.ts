@@ -5,7 +5,6 @@
  * across the SSH transport boundary.
  */
 
-import type { Stimulus } from "../types/mod.js"
 import type { StimulusEvent, ProtocolMessage } from "./types.js"
 
 /**

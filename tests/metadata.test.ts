@@ -15,8 +15,11 @@ import { Capsule, defineCapability, defineOperation } from "@src/exports"
 describe("Metadata Introspection", () => {
     test("describe() returns unique capsule id", async () => {
         const capsule = Capsule({
-            name: "test-capsule",
-            capabilities: []
+            def: {
+                name: "test-capsule",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -27,8 +30,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() returns correct capsule name", async () => {
         const capsule = Capsule({
-            name: "test-capsule",
-            capabilities: []
+            def: {
+                name: "test-capsule",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -37,9 +43,12 @@ describe("Metadata Introspection", () => {
 
     test("describe() returns capsule docs", async () => {
         const capsule = Capsule({
-            name: "test-capsule",
-            docs: "This is a test capsule for validation",
-            capabilities: []
+            def: {
+                name: "test-capsule",
+                docs: "This is a test capsule for validation",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -60,8 +69,11 @@ describe("Metadata Introspection", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [cap1, cap2] as const
+            def: {
+                name: "test",
+                capabilities: [cap1, cap2] as const
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -98,8 +110,11 @@ describe("Metadata Introspection", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -121,20 +136,23 @@ describe("Metadata Introspection", () => {
 
     test("describe() includes declared senses", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: [],
-            senses: [
-                {
-                    name: "sensor:temperature",
-                    docs: "Temperature readings in celsius",
-                    signature: "{ value: number, unit: string }"
-                },
-                {
-                    name: "sensor:humidity",
-                    docs: "Humidity percentage",
-                    signature: "{ percentage: number }"
-                }
-            ]
+            def: {
+                name: "test",
+                capabilities: [],
+                senses: [
+                    {
+                        name: "sensor:temperature",
+                        docs: "Temperature readings in celsius",
+                        signature: "{ value: number, unit: string }"
+                    },
+                    {
+                        name: "sensor:humidity",
+                        docs: "Humidity percentage",
+                        signature: "{ percentage: number }"
+                    }
+                ]
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -166,16 +184,19 @@ describe("Metadata Introspection", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            docs: "Test capsule",
-            capabilities: [capability] as const,
-            senses: [
-                {
-                    name: "test:sense",
-                    docs: "Test sense",
-                    signature: "any"
-                }
-            ]
+            def: {
+                name: "test",
+                docs: "Test capsule",
+                capabilities: [capability] as const,
+                senses: [
+                    {
+                        name: "test:sense",
+                        docs: "Test sense",
+                        signature: "any"
+                    }
+                ]
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -208,8 +229,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() works for capsule with no senses", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: []
+            def: {
+                name: "test",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -219,8 +243,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() works for capsule with no docs", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: []
+            def: {
+                name: "test",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -266,21 +293,24 @@ describe("Metadata Introspection", () => {
         })
 
         const capsule = Capsule({
-            name: "multi-capability-capsule",
-            docs: "A capsule with multiple capabilities",
-            capabilities: [filesystem, network] as const,
-            senses: [
-                {
-                    name: "fs:change",
-                    docs: "File system change event",
-                    signature: "{ path: string, type: string }"
-                },
-                {
-                    name: "net:request",
-                    docs: "Network request event",
-                    signature: "{ url: string, method: string }"
-                }
-            ]
+            def: {
+                name: "multi-capability-capsule",
+                docs: "A capsule with multiple capabilities",
+                capabilities: [filesystem, network] as const,
+                senses: [
+                    {
+                        name: "fs:change",
+                        docs: "File system change event",
+                        signature: "{ path: string, type: string }"
+                    },
+                    {
+                        name: "net:request",
+                        docs: "Network request event",
+                        signature: "{ url: string, method: string }"
+                    }
+                ]
+            },
+            transport: 'local'
         })
 
         const metadata = capsule.describe()
@@ -308,9 +338,12 @@ describe("Metadata Introspection", () => {
 
     test("describe() can be called multiple times", async () => {
         const capsule = Capsule({
-            name: "test",
-            docs: "Test capsule",
-            capabilities: []
+            def: {
+                name: "test",
+                docs: "Test capsule",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         const metadata1 = capsule.describe()
@@ -342,8 +375,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() works before boot", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: []
+            def: {
+                name: "test",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         // Should work before boot
@@ -353,8 +389,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() works after boot", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: []
+            def: {
+                name: "test",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -367,8 +406,11 @@ describe("Metadata Introspection", () => {
 
     test("describe() works after shutdown", async () => {
         const capsule = Capsule({
-            name: "test",
-            capabilities: []
+            def: {
+                name: "test",
+                capabilities: []
+            },
+            transport: 'local'
         })
 
         await capsule.boot()

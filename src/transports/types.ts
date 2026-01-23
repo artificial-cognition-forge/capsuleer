@@ -4,7 +4,9 @@
  * Defines SSH configuration and JSONL protocol message types.
  */
 
-import type { Stimulus, CapsuleMetadata } from "../types/mod.js"
+import type { CapsuleMetadata } from "@types/metadata"
+
+
 
 /**
  * SSH connection configuration

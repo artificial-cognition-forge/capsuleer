@@ -52,9 +52,12 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const,
-            middleware: [capsuleMw]
+            def: {
+                name: "test",
+                capabilities: [capability] as const,
+                middleware: [capsuleMw]
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -101,8 +104,11 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -154,8 +160,11 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -210,9 +219,12 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const,
-            middleware: [capsuleMw]
+            def: {
+                name: "test",
+                capabilities: [capability] as const,
+                middleware: [capsuleMw]
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -263,9 +275,12 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const,
-            middleware: [capsuleMw]
+            def: {
+                name: "test",
+                capabilities: [capability] as const,
+                middleware: [capsuleMw]
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -319,8 +334,11 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -360,9 +378,12 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const,
-            middleware: [capsuleMw]
+            def: {
+                name: "test",
+                capabilities: [capability] as const,
+                middleware: [capsuleMw]
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -425,8 +446,11 @@ describe("Operation-level Middleware", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()

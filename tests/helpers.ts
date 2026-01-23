@@ -75,10 +75,13 @@ export function createTestCapsule<T extends Record<string, any>>(config: {
     })
 
     return Capsule({
-        name: config.name || "test-capsule",
-        capabilities: [capability] as const,
-        middleware: config.middleware,
-        hooks: config.hooks
+        def: {
+            name: config.name || "test-capsule",
+            capabilities: [capability] as const,
+            middleware: config.middleware,
+            hooks: config.hooks
+        },
+        transport: 'local'
     })
 }
 

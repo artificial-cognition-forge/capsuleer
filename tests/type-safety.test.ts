@@ -37,8 +37,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -70,8 +73,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -103,8 +109,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -136,8 +145,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -191,8 +203,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -238,8 +253,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -280,8 +298,11 @@ describe("Type Safety", () => {
         })
 
         const capsule = Capsule<typeof capability extends any ? readonly [typeof capability] : never, TestStimuli>({
-            name: "test",
-            capabilities: [capability] as const
+            def: {
+                name: "test",
+                capabilities: [capability] as const
+            },
+            transport: 'local'
         })
 
         await capsule.boot()
@@ -311,18 +332,21 @@ describe("Type Safety", () => {
         let bootContext: any = null
 
         const capsule = Capsule({
-            name: "test",
-            capabilities: [capability] as const,
-            hooks: {
-                async boot({ capsule: ctx }) {
-                    bootContext = ctx
-                    // ctx.emit is available
-                    ctx.emit({ sense: "boot", data: "ok" })
+            def: {
+                name: "test",
+                capabilities: [capability] as const,
+                hooks: {
+                    async boot({ capsule: ctx }) {
+                        bootContext = ctx
+                        // ctx.emit is available
+                        ctx.emit({ sense: "boot", data: "ok" })
 
-                    // ctx.trigger should not exist (TypeScript error if accessed)
-                    // Verify runtime behavior
+                        // ctx.trigger should not exist (TypeScript error if accessed)
+                        // Verify runtime behavior
+                    }
                 }
-            }
+            },
+            transport: 'local'
         })
 
         await capsule.boot()

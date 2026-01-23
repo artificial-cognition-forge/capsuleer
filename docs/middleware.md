@@ -41,9 +41,9 @@ const authMiddleware = defineMiddleware({
 })
 
 // Attach to capsule
-const capsuleDef = {
+const capsuleDef = Capsule({
   name: "my-capsule",
   capabilities: [tmux],
   middleware: [authMiddleware]
-}
+})
 ```

@@ -1,4 +1,8 @@
-export { Capsule } from "./Capsule.js"
+// Public API - unified entry point for creating capsules
+export { Capsule, type CapsuleConfig } from "./Capsule.js"
+
+// Core implementations (exported for advanced use)
+export { CapsuleCore } from "./CapsuleCore.js"
 export { LocalCapsuleInstance } from "./local.js"
 export { RemoteCapsuleInstance } from "./remote.js"
 export * from "./defineCapability.js"

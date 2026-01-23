@@ -17,7 +17,7 @@ import type {
     ExtractOperationReturn,
     StimulusHandler
 } from "./types/mod.js"
-import { Capsule } from "./Capsule.js"
+import { CapsuleCore } from "./CapsuleCore.js"
 
 /**
  * Create a local CapsuleInstance wrapping a Capsule runtime.
@@ -37,7 +37,7 @@ export function LocalCapsuleInstance<
     def: CapsuleDef<TCapabilities, TStimulusMap>
 ): CapsuleInstance<CapsuleDef<TCapabilities, TStimulusMap>> {
     // Create the local runtime instance
-    const capsule = Capsule(def)
+    const capsule = CapsuleCore(def)
 
     // Return CapsuleInstance interface that delegates to local capsule
     return {
