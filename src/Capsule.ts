@@ -205,8 +205,13 @@ export function Capsule<
             }
 
             try {
-                // Call handler (any emit() calls will include provenance)
-                return await op.handler(ctx)
+                // For stream operations, handler returns AsyncIterable directly
+                // For normal operations, handler returns Promise<T>
+                if (op.kind === "stream") {
+                    return op.handler(ctx) as any
+                } else {
+                    return await op.handler(ctx)
+                }
             } finally {
                 // Remove from in-flight tracking
                 inFlightOperations.delete(operationController)

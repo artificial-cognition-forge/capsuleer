@@ -53,11 +53,16 @@ export type ExtractOperationParams<
 
 /**
  * Extract return type for a specific operation.
+ * For stream operations, wraps the yield type in AsyncIterable.
  */
 export type ExtractOperationReturn<
     T extends CapsuleDef<any, any>,
     CapName extends ExtractCapabilityNames<T>,
     OpName extends ExtractOperationNames<T, CapName>
-> = ExtractOperation<T, CapName, OpName> extends OperationDef<any, infer TReturn>
+> = ExtractOperation<T, CapName, OpName> extends { kind: "stream"; handler: (...args: any[]) => infer TAsyncIter }
+    ? TAsyncIter extends AsyncIterable<infer TYield>
+        ? AsyncIterable<TYield>
+        : never
+    : ExtractOperation<T, CapName, OpName> extends OperationDef<any, infer TReturn>
     ? TReturn
     : never

@@ -72,21 +72,57 @@ export type OperationHandler<
     ctx: OperationExecutionContext<TStimulusMap> & { params: TParams }
 ) => Promise<TReturn>
 
-/** Definition of a single operation */
-export type OperationDef<TParams = unknown, TReturn = unknown> = {
+/**
+ * Handler function for a stream operation.
+ * Returns an async iterable that yields values over time.
+ *
+ * Same constraints as OperationHandler apply.
+ * INTERRUPTIBILITY: Yielded values MUST respect ctx.signal
+ */
+export type StreamOperationHandler<
+    TParams = unknown,
+    TYield = unknown,
+    TStimulusMap extends StimulusMap = StimulusMap
+> = (
+    ctx: OperationExecutionContext<TStimulusMap> & { params: TParams }
+) => AsyncIterable<TYield>
+
+/** Definition of a normal (call) operation */
+export type NormalOperationDef<TParams = unknown, TReturn = unknown> = {
     /** Operation name */
     name: string
     /** Human-readable documentation */
     docs: string
     /** TypeScript signature for introspection */
     signature: string
-    /** Execution shape: "call" for finite operations, "stream" for ongoing operations. Defaults to "call". */
-    kind?: "call" | "stream"
+    /** Execution shape: "call" for finite operations. Omit for normal ops. */
+    kind?: "call"
     /** Optional operation-level middleware */
     middleware?: import("./middleware.ts").OperationMiddleware<TParams>[]
     /** The operation handler */
     handler: OperationHandler<TParams, TReturn>
 }
+
+/** Definition of a stream operation */
+export type StreamOperationDef<TParams = unknown, TYield = unknown> = {
+    /** Operation name */
+    name: string
+    /** Human-readable documentation */
+    docs: string
+    /** TypeScript signature for introspection */
+    signature: string
+    /** Execution shape: "stream" for ongoing operations */
+    kind: "stream"
+    /** Optional operation-level middleware */
+    middleware?: import("./middleware.ts").OperationMiddleware<TParams>[]
+    /** The stream operation handler */
+    handler: StreamOperationHandler<TParams, TYield>
+}
+
+/** Definition of a single operation (discriminated union) */
+export type OperationDef<TParams = unknown, TReturn = unknown> =
+    | NormalOperationDef<TParams, TReturn>
+    | StreamOperationDef<TParams, TReturn>
 
 /**
  * Typed map of operations.
