@@ -4,7 +4,7 @@
  * Defines SSH configuration and JSONL protocol message types.
  */
 
-import type { CapsuleMetadata } from "@types/metadata"
+import type { CapsuleMetadata } from "types/metadata"
 
 
 

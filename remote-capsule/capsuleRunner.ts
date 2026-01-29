@@ -6,8 +6,7 @@
  * Forwards stimuli back to the client.
  */
 
-import type { CapsuleDef, CapsuleInstance, Stimulus, StimulusHandler } from "../src/types/mod.js"
-import { CapsuleCore } from "../src/Capsule.js"
+import { CapsuleCore } from "src/CapsuleCore.js"
 import type {
     BootMessage,
     BootResponse,
@@ -23,6 +22,8 @@ import type {
 import { writeMessage, logDebug, logError } from "./marshalling.js"
 import { abortAllOperations } from "./utils.js"
 import type { Writable } from "node:stream"
+import type { CapsuleDef, CapsuleInstance } from "types/capsule.js"
+import type { Stimulus } from "types/stimulus.js"
 
 type CapsuleState = "created" | "booted" | "shutdown"
 

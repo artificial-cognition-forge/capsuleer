@@ -15,7 +15,6 @@
  *   bun remote-capsule/index.ts ./examples/tmux-capsule.ts
  */
 
-import type { CapsuleDef } from "../src/types/mod.js"
 import { CapsuleRunner } from "./capsuleRunner.js"
 import { createLineReader, parseMessage, writeMessage, logDebug, logError } from "./marshalling.js"
 import type {
@@ -25,6 +24,7 @@ import type {
     AbortMessage,
     ShutdownMessage
 } from "../src/transports/types.js"
+import type { CapsuleDef } from "types/capsule.js"
 
 /**
  * Main server function

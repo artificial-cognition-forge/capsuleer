@@ -7,10 +7,9 @@
  * - Stimulus listener management
  */
 
-import type { ReadableStream } from "node:stream"
-import type { StimulusHandler, Stimulus } from "../types/mod.js"
 import type { StreamEvent, TriggerResponse } from "./types.js"
 import { deserializeMessage, unmarshalStimulus } from "./marshalling.js"
+import type { StimulusHandler } from "types/stimulus.js"
 
 /**
  * Handles pending trigger request resolution
