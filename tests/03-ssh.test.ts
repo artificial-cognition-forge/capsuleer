@@ -473,7 +473,111 @@ describe('SSH Transport', () => {
     })
   })
 
-  describe('7. Error Handling', () => {
+  describe('7. SSH Metadata (describe and ssh methods)', () => {
+    test('capsule.ssh() returns complete connection details after boot', async () => {
+      const { capsule, port } = createTestCapsule()
+      await capsule.boot()
+
+      try {
+        const sshMetadata = capsule.ssh()
+
+        expect(sshMetadata).toBeDefined()
+        expect(sshMetadata?.host).toBe(SSH_HOST)
+        expect(sshMetadata?.port).toBe(port)
+        expect(sshMetadata?.username).toBe('capsule')
+        expect(sshMetadata?.publicKey).toBeDefined()
+        expect(sshMetadata?.publicKeyFingerprint).toBeDefined()
+
+        // Public key should start with algo (e.g., "ssh-ed25519")
+        expect(sshMetadata?.publicKey).toMatch(/^ssh-/)
+
+        // Fingerprint should follow SSH format (e.g., "SHA256:xxxx...")
+        expect(sshMetadata?.publicKeyFingerprint).toMatch(/^SHA256:/)
+      } finally {
+        await capsule.shutdown()
+      }
+    })
+
+    test('capsule.describe() includes ssh metadata in response', async () => {
+      const { capsule, port } = createTestCapsule()
+      await capsule.boot()
+
+      try {
+        const metadata = capsule.describe()
+
+        expect(metadata).toBeDefined()
+        expect(metadata.ssh).toBeDefined()
+        expect(metadata.ssh?.host).toBe(SSH_HOST)
+        expect(metadata.ssh?.port).toBe(port)
+        expect(metadata.ssh?.username).toBe('capsule')
+        expect(metadata.ssh?.publicKey).toBeDefined()
+        expect(metadata.ssh?.publicKeyFingerprint).toBeDefined()
+      } finally {
+        await capsule.shutdown()
+      }
+    })
+
+    test('capsule.ssh() returns undefined before boot', async () => {
+      const { capsule } = createTestCapsule()
+
+      const sshMetadata = capsule.ssh()
+      expect(sshMetadata).toBeUndefined()
+    })
+
+    test('capsule.ssh() respects custom username from config', async () => {
+      const port = getNextPort()
+      const def: CapsuleDef = {
+        name: 'custom-user-capsule',
+        capabilities: [],
+        ssh: {
+          port,
+          host: SSH_HOST,
+          username: 'customuser',
+          hostKeyPath: SSH_KEY_PATH
+        }
+      }
+
+      const capsule = Capsule(def)
+      activeCapsules.push(capsule)
+      await capsule.boot()
+
+      try {
+        const sshMetadata = capsule.ssh()
+        expect(sshMetadata?.username).toBe('customuser')
+      } finally {
+        await capsule.shutdown()
+      }
+    })
+
+    test('capsule.ssh() uses default values for unspecified config', async () => {
+      const port = getNextPort()
+      // Only specify required fields
+      const def: CapsuleDef = {
+        name: 'minimal-ssh-capsule',
+        capabilities: [],
+        ssh: {
+          port,
+          hostKeyPath: SSH_KEY_PATH
+          // host and username not specified
+        }
+      }
+
+      const capsule = Capsule(def)
+      activeCapsules.push(capsule)
+      await capsule.boot()
+
+      try {
+        const sshMetadata = capsule.ssh()
+        expect(sshMetadata?.host).toBe('localhost') // default host
+        expect(sshMetadata?.username).toBe('capsule') // default username
+        expect(sshMetadata?.port).toBe(port)
+      } finally {
+        await capsule.shutdown()
+      }
+    })
+  })
+
+  describe('8. Error Handling', () => {
     test('invalid host key path fails at startup', async () => {
       const def: CapsuleDef = {
         name: 'bad-key-capsule',

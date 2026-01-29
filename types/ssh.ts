@@ -36,6 +36,8 @@ export type SSHServerConfig = {
     port?: number
     /** Host to bind to (default: 'localhost') */
     host?: string
+    /** Username for SSH connections (default: 'capsule') */
+    username?: string
     /** Path to SSH private key for authentication */
     hostKeyPath: string
     /** Optional authentication handler */

@@ -27,12 +27,49 @@ export function Capsule<
     const stimulusListeners = new Set<StimulusHandler>()
     let inLifecycleHook = false // Track if we're currently in a lifecycle hook
     let sshServer: SSHServerInstance | null = null // SSH server instance (if configured)
+    let sshMetadata: { host: string; port: number; username: string; publicKey: string; publicKeyFingerprint: string } | null = null // SSH connection metadata
 
     // Track in-flight operations for abort-on-shutdown
     const inFlightOperations = new Set<AbortController>()
 
     // Generate unique capsule instance ID
     const capsuleId = `${def.name}-${Math.random().toString(36).slice(2, 11)}`
+
+    /**
+     * Extract SSH metadata (public key and fingerprint) from the private key
+     */
+    async function extractSSHMetadata(config: typeof def.ssh): Promise<typeof sshMetadata> {
+        if (!config) return null
+
+        const host = config.host ?? 'localhost'
+        const port = config.port ?? 2222
+        const username = config.username ?? 'capsule'
+
+        try {
+            // Extract public key: ssh-keygen -y -f <key>
+            const pubKeyProc = Bun.spawn(['ssh-keygen', '-y', '-f', config.hostKeyPath])
+            const pubKeyExitCode = await pubKeyProc.exited
+            if (pubKeyExitCode !== 0) {
+                throw new Error(`ssh-keygen failed with exit code ${pubKeyExitCode}`)
+            }
+            const publicKey = (await pubKeyProc.stdout.text()).trim()
+
+            // Extract fingerprint: ssh-keygen -l -f <key>
+            const fpProc = Bun.spawn(['ssh-keygen', '-l', '-f', config.hostKeyPath])
+            const fpExitCode = await fpProc.exited
+            if (fpExitCode !== 0) {
+                throw new Error(`ssh-keygen failed with exit code ${fpExitCode}`)
+            }
+            const fpOutput = (await fpProc.stdout.text()).trim()
+            // Parse fingerprint (format: "256 SHA256:xxxx... user@host (ED25519)")
+            const publicKeyFingerprint = fpOutput.split(' ')[1]
+
+            return { host, port, username, publicKey, publicKeyFingerprint }
+        } catch (error) {
+            // If we can't extract the keys, return null
+            return null
+        }
+    }
 
     return {
         describe(): CapsuleMetadata {
@@ -50,7 +87,7 @@ export function Capsule<
                         kind: op.kind ?? "call"
                     }))
                 })),
-                ssh: this.ssh(),
+                ssh: sshMetadata ?? undefined,
                 senses: def.senses
             }
         },
@@ -77,6 +114,8 @@ export function Capsule<
             if (def.ssh) {
                 try {
                     sshServer = await createSSHServer(def.ssh)
+                    // Extract SSH metadata after server starts
+                    sshMetadata = await extractSSHMetadata(def.ssh)
                 } catch (error) {
                     throw new Error(`Failed to start SSH server: ${error instanceof Error ? error.message : String(error)}`)
                 }
@@ -268,10 +307,8 @@ export function Capsule<
             }
         },
 
-        ssh(): undefined {
-
-            // TODO: return ssh config
-            return undefined
+        ssh() {
+            return sshMetadata ?? undefined
         }
     }
 }

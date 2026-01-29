@@ -4,8 +4,6 @@
  * Introspection metadata for capsules and their capabilities.
  */
 
-import type { SSHConfig } from "./ssh"
-
 /** Introspection metadata for the capsule */
 export type CapsuleMetadata = {
     id: string
@@ -21,7 +19,13 @@ export type CapsuleMetadata = {
             kind: "call" | "stream"
         }[]
     }[]
-    ssh?: SSHConfig
+    ssh?: {
+        host: string
+        port: number
+        username: string
+        publicKey: string
+        publicKeyFingerprint: string
+    }
     senses?: {
         name: string
         docs: string

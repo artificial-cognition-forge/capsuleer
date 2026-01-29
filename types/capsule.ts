@@ -122,8 +122,8 @@ export type CapsuleInstance<
     onStimulus(handler: StimulusHandler): () => void
 
     /**
-     * Get SSH connection configuration (only available for remote capsules).
-     * Returns the SSH config if this is a remote capsule, undefined for local capsules.
+     * Get SSH connection details (only available for capsules hosting an SSH server).
+     * Returns the host, port, username, and public key for remote clients to connect.
      */
-    ssh(): SSHConfig | undefined
+    ssh(): { host: string; port: number; username: string; publicKey: string; publicKeyFingerprint: string } | undefined
 }
