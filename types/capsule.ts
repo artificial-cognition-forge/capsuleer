@@ -15,6 +15,7 @@ import type {
     ExtractOperationParams,
     ExtractOperationReturn
 } from "./extractors"
+import type { SSHConfig } from "./ssh"
 
 /**
  * Configuration for creating a capsule.
@@ -117,4 +118,10 @@ export type CapsuleInstance<
      * Returns unsubscribe function.
      */
     onStimulus(handler: StimulusHandler): () => void
+
+    /**
+     * Get SSH connection configuration (only available for remote capsules).
+     * Returns the SSH config if this is a remote capsule, undefined for local capsules.
+     */
+    ssh(): SSHConfig | undefined
 }

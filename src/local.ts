@@ -71,6 +71,10 @@ export function LocalCapsuleInstance<
 
         onStimulus(handler: StimulusHandler): () => void {
             return capsule.onStimulus(handler)
+        },
+
+        ssh() {
+            return undefined
         }
     }
 }

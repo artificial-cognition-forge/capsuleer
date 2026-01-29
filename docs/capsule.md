@@ -82,6 +82,53 @@ A `CapsuleInstance` is controlled by a transport layer that:
 
 The capsule itself knows nothing about which transport carries it—local or remote behavior is identical.
 
+### Interface Overview
+
+A `CapsuleInstance` exposes:
+
+- `describe()` - Returns metadata about capabilities, operations, and senses
+- `boot()` - Initializes the capsule (idempotent)
+- `shutdown()` - Gracefully stops the capsule (idempotent)
+- `trigger(capability, operation, params, signal?)` - Invokes an operation
+- `emit(stimulus)` - Emits a stimulus event (local capsules only)
+- `onStimulus(handler)` - Subscribes to stimulus events
+- `ssh()` - Returns SSH configuration (remote capsules only)
+
+### Accessing SSH Connection Details
+
+For remote capsules, you can retrieve the SSH configuration after creation:
+
+```typescript
+const capsule = Capsule({
+  def: capsuleDef,
+  transport: 'ssh',
+  ssh: {
+    host: 'example.com',
+    username: 'user',
+    auth: { type: 'key', path: '~/.ssh/id_rsa' },
+    capsulePath: '/usr/local/bin/capsule'
+  },
+  remoteName: 'my-capsule'
+})
+
+// Get the SSH config back
+const sshConfig = capsule.ssh()
+// Returns: { host: 'example.com', username: 'user', ... }
+```
+
+For local capsules, `capsule.ssh()` returns `undefined`:
+
+```typescript
+const capsule = Capsule({
+  def: capsuleDef,
+  transport: 'local'
+})
+
+const sshConfig = capsule.ssh()  // undefined
+```
+
+This is useful when you need to expose SSH connection details for manual access to the remote capsule (e.g., in dev tools or dashboards).
+
 ## Architecture Diagram
 
 ```

@@ -9,13 +9,10 @@
  * - Remote: Capsule({ def, transport: 'ssh', ssh: {...}, remoteName: '...' })
  */
 
-import type {
-    CapsuleDef,
-    CapsuleInstance
-} from "./types/mod.js"
 import type { SSHConfig } from "./transports/types.js"
 import { LocalCapsuleInstance } from "./local.js"
 import { RemoteCapsuleInstance } from "./remote.js"
+import type { CapsuleDef, CapsuleInstance } from "types/capsule.js"
 
 /**
  * Discriminated union configuration for Capsule creation.

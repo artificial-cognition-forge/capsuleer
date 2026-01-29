@@ -421,6 +421,10 @@ export function RemoteCapsuleInstance<
                 throw new Error("SSH connection not yet established - call boot() first")
             }
             return protocol.onStimulus(handler)
+        },
+
+        ssh(): SSHConfig {
+            return sshConfig
         }
     }
 }

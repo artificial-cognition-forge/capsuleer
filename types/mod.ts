@@ -62,3 +62,8 @@ export type {
     ExtractOperationParams,
     ExtractOperationReturn
 } from "./extractors"
+
+// SSH types
+export type {
+    SSHConfig
+} from "./ssh"
