@@ -15,7 +15,7 @@ import type {
     ExtractOperationParams,
     ExtractOperationReturn
 } from "./extractors"
-import type { SSHConfig } from "./ssh"
+import type { SSHConfig, SSHServerConfig } from "./ssh"
 
 /**
  * Configuration for creating a capsule.
@@ -37,6 +37,8 @@ export type CapsuleDef<
     middleware?: CapsuleMiddleware[]
     /** Lifecycle hooks */
     hooks?: LifecycleHooks<TStimulusMap>
+    /** SSH server configuration - if provided, SSH server auto-starts during boot */
+    ssh?: SSHServerConfig
 }
 
 /**

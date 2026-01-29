@@ -92,9 +92,9 @@ export type NormalOperationDef<TParams = unknown, TReturn = unknown> = {
     /** Operation name */
     name: string
     /** Human-readable documentation */
-    docs: string
-    /** TypeScript signature for introspection */
-    signature: string
+    docs?: string
+
+    signature?: string
     /** Execution shape: "call" for finite operations. Omit for normal ops. */
     kind?: "call"
     /** Optional operation-level middleware */
@@ -108,9 +108,9 @@ export type StreamOperationDef<TParams = unknown, TYield = unknown> = {
     /** Operation name */
     name: string
     /** Human-readable documentation */
-    docs: string
+    docs?: string
     /** TypeScript signature for introspection */
-    signature: string
+    signature?: string
     /** Execution shape: "stream" for ongoing operations */
     kind: "stream"
     /** Optional operation-level middleware */

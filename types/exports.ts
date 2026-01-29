@@ -26,3 +26,9 @@ export type {
     CapsuleInstance,
     CapsuleMetadata
 } from "./mod.js"
+
+// SSH types
+export type { SSHConfig, SSHServerConfig } from "./ssh.js"
+
+// SSH server types
+export type { SSHServerInstance } from "../src/sshServer.js"

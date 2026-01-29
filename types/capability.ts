@@ -14,7 +14,7 @@ export type CapabilityDef<TOperations extends OperationsMap = OperationsMap> = {
     /** Capability name (e.g. "tmux", "filesystem") */
     name: string
     /** Human-readable documentation */
-    docs: string
+    docs?: string
     /** Map of operation name → operation definition */
     operations: TOperations
 }

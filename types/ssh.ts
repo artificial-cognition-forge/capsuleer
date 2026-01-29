@@ -1,11 +1,11 @@
 /**
  * SSH TYPES
  *
- * SSH configuration for remote capsule execution.
+ * SSH configuration for remote capsule execution and SSH server hosting.
  */
 
 /**
- * SSH connection configuration
+ * SSH client configuration (for connecting TO a remote capsule)
  */
 export type SSHConfig = {
     /** SSH host */
@@ -26,4 +26,22 @@ export type SSHConfig = {
     workingDir?: string
     /** Connection timeout in ms (default 5000) */
     connectTimeout?: number
+}
+
+/**
+ * SSH server configuration (for hosting a capsule via SSH)
+ */
+export type SSHServerConfig = {
+    /** Port to listen on (default: 2222) */
+    port?: number
+    /** Host to bind to (default: 'localhost') */
+    host?: string
+    /** Path to SSH private key for authentication */
+    hostKeyPath: string
+    /** Optional authentication handler */
+    onAuth?: (ctx: {
+        username: string
+        key?: { algo: string; data: Buffer }
+        password?: string
+    }) => boolean | Promise<boolean>
 }
