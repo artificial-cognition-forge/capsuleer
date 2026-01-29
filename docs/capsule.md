@@ -17,7 +17,7 @@ The mind cannot access anything outside the capsule's declared interface.
 
 ## Creating a Capsule
 
-A capsule is created via `Capsule(config)`, which returns a `CapsuleInstance`. The config specifies the capsule definition and transport (local or SSH).
+A capsule is created via `Capsule(def)`, which returns a `CapsuleInstance`. The definition specifies capabilities, middleware, lifecycle hooks, and optionally an SSH server configuration.
 
 ### Definition Structure
 
@@ -32,6 +32,7 @@ A capsule is created via `Capsule(config)`, which returns a `CapsuleInstance`. T
     shutdown?: (ctx) => Promise<void>
   }
   senses?: Sense[]               // Optional stimulus definitions
+  ssh?: SSHServerConfig          // Optional SSH server (starts during boot)
 }
 ```
 
@@ -39,48 +40,52 @@ A capsule is created via `Capsule(config)`, which returns a `CapsuleInstance`. T
 - **middleware**: Applies to all operations in the capsule
 - **hooks**: `boot()` runs after successful initialization, `shutdown()` runs during cleanup
 - **senses**: Metadata about possible stimuli the capsule can emit
+- **ssh**: Optional SSH server configuration. If provided, SSH server starts during `boot()`
 
 ### Creating an Instance
 
-**Local execution** (in-process):
+**Basic capsule** (no SSH server):
 
 ```typescript
 const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'local'
+  name: 'my-capsule',
+  capabilities: [capability1, capability2],
+  senses: [...]
 })
+
+await capsule.boot()
 ```
 
-**Remote execution** (over SSH):
+**With SSH server:**
 
 ```typescript
 const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'ssh',
+  name: 'my-capsule',
+  capabilities: [capability1, capability2],
   ssh: {
-    host: 'example.com',
-    username: 'user',
-    auth: { type: 'key', path: '~/.ssh/id_rsa' },
-    capsulePath: '/usr/local/bin/capsule'
-  },
-  remoteName: 'my-capsule'
+    // SSH server configuration
+    // See Transports doc for options
+  }
 })
+
+await capsule.boot()  // SSH server starts automatically
 ```
 
-See [Transports](./transports.md) for detailed SSH configuration options.
+See [Transports](./transports.md) for SSH server configuration details.
 
-The returned `CapsuleInstance` has an **identical interface** regardless of transport. All operations and stimulus subscriptions work the same way.
+The returned `CapsuleInstance` has a unified interface. If SSH is configured, remote clients can connect and invoke operations over the network.
 
 ## CapsuleInstance Lifecycle
 
-A `CapsuleInstance` is controlled by a transport layer that:
+A `CapsuleInstance` manages three lifecycle phases:
 
-1. Calls `capsule.boot()` when a connection is established
-2. Subscribes to stimuli via `capsule.onStimulus(handler)`
-3. Invokes operations via `capsule.trigger(capability, operation, params)`
-4. Calls `capsule.shutdown()` when the connection closes
+1. **Initialization**: Ensures `capsule.boot()` has been called before servicing any invocations (idempotent, safe with multiple clients)
+2. **Operation**: Clients subscribe to stimuli via `capsule.onStimulus(handler)` and invoke operations via `capsule.trigger(capability, operation, params)`
+3. **Cleanup**: Calls `capsule.shutdown()` when the capsule is no longer needed (idempotent, aborts all in-flight operations)
 
-The capsule itself knows nothing about which transport carries it—local or remote behavior is identical.
+`boot()` and `shutdown()` are instance-level lifecycle operations, not connection-level. In multi-client scenarios (e.g., SSH server with multiple connections), `boot()` is called once and `shutdown()` once—all clients share the same instance state.
+
+The capsule itself knows nothing about which transport carries it—local and remote behavior is identical.
 
 ### Interface Overview
 
@@ -90,44 +95,8 @@ A `CapsuleInstance` exposes:
 - `boot()` - Initializes the capsule (idempotent)
 - `shutdown()` - Gracefully stops the capsule (idempotent)
 - `trigger(capability, operation, params, signal?)` - Invokes an operation
-- `emit(stimulus)` - Emits a stimulus event (local capsules only)
-- `onStimulus(handler)` - Subscribes to stimulus events
-- `ssh()` - Returns SSH configuration (remote capsules only)
-
-### Accessing SSH Connection Details
-
-For remote capsules, you can retrieve the SSH configuration after creation:
-
-```typescript
-const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'ssh',
-  ssh: {
-    host: 'example.com',
-    username: 'user',
-    auth: { type: 'key', path: '~/.ssh/id_rsa' },
-    capsulePath: '/usr/local/bin/capsule'
-  },
-  remoteName: 'my-capsule'
-})
-
-// Get the SSH config back
-const sshConfig = capsule.ssh()
-// Returns: { host: 'example.com', username: 'user', ... }
-```
-
-For local capsules, `capsule.ssh()` returns `undefined`:
-
-```typescript
-const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'local'
-})
-
-const sshConfig = capsule.ssh()  // undefined
-```
-
-This is useful when you need to expose SSH connection details for manual access to the remote capsule (e.g., in dev tools or dashboards).
+- `emit(stimulus)` - Emits a stimulus event (callable from lifecycle hooks and operation handlers). **Non-blocking and best-effort**—emission does not affect operation execution and does not fail. If called outside the booted state, silently returns.
+- `onStimulus(handler)` - Subscribes to stimulus events (returns unsubscribe function)
 
 ## Architecture Diagram
 

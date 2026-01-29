@@ -20,6 +20,43 @@ Capsules are not agents. They do not reason, plan, or decide goals. They are iso
 - **Lifecycle enforcement**: Operations are illegal before `boot()` and after `shutdown()`.
 - **Separation of concerns**: Middleware cannot emit stimuli. Handlers cannot invoke other operations.
 
+## SSH Remote Access
+
+Capsules can expose an SSH server to allow remote clients (other systems, cognitive agents, services) to invoke operations over the network. This is the centerpiece of distributed authority boundaries.
+
+**Enable with a single config:**
+
+```typescript
+const capsule = Capsule({
+  name: 'my-capsule',
+  capabilities: [...],
+  ssh: {
+    host: '0.0.0.0',
+    port: 2222,
+    auth: { type: 'key', path: '/etc/capsule/key' }
+  }
+})
+
+await capsule.boot()  // SSH server starts automatically
+```
+
+**All guarantees apply across the network:**
+- Remote clients get full type safety (capability/operation pairs are compile-checked locally)
+- Middleware runs before handlers, even for remote invocations
+- Stimulus events stream back to remote clients in real-time
+- Cancellation via `AbortSignal` propagates over SSH
+- One-way stimulus flow: remote clients cannot push data into the capsule
+
+**Common use cases:**
+- **Privilege separation**: Run capsule as a restricted user while clients run with different permissions
+- **Network isolation**: Capsule on isolated network, clients connect over encrypted SSH tunnel
+- **Multi-machine deployments**: Expose capsule on one machine, invoke from another with zero logic changes
+- **Distributed cognitive systems**: Expose specialized capsules as services to other LLM-based systems
+
+The SSH server is optional—capsules work fine without it. But when enabled, it transforms a single-process boundary into a distributed authority boundary.
+
+See [Transports](./transports.md) for SSH configuration details and examples.
+
 ## Non-Goals
 
 This package does **not**:

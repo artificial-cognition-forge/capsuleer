@@ -1,15 +1,15 @@
-# Transports: Local and Remote Execution
+# Transports: SSH Server Configuration
 
-Capsules are **transport-agnostic**. The same `CapsuleInstance` interface works whether execution is local (in-process) or remote (over SSH). The API is identical—only the configuration differs.
+A capsule instance is always created locally via `Capsule(def)`. To make it accessible to remote clients, add an SSH server configuration to the capsule definition.
 
 ## Quick Start
 
-### Local Transport
+### Capsule Without SSH Server
 
 ```typescript
 const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'local'
+  name: 'my-capsule',
+  capabilities: [capability1, capability2]
 })
 
 await capsule.boot()
@@ -17,41 +17,34 @@ const result = await capsule.trigger('capability', 'operation', params)
 await capsule.shutdown()
 ```
 
-**When to use:**
-- Development and testing
-- Single-process systems
-- Minimal latency required
+Only local code can invoke operations.
 
-### Remote Transport (SSH)
+### Capsule With SSH Server
 
 ```typescript
 const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'ssh',
+  name: 'my-capsule',
+  capabilities: [capability1, capability2],
   ssh: {
-    host: 'example.com',
-    username: 'user',
-    auth: { type: 'key', path: '~/.ssh/id_rsa' },
-    capsulePath: '/usr/local/bin/capsule'
-  },
-  remoteName: 'my-capsule'
+    host: '0.0.0.0',
+    port: 2222,
+    auth: { type: 'key', path: '/path/to/private/key' },
+    // Other SSH server options...
+  }
 })
 
-await capsule.boot()
-const result = await capsule.trigger('capability', 'operation', params)
-await capsule.shutdown()
+await capsule.boot()  // SSH server starts automatically
+// Remote clients can now connect and invoke operations
+await capsule.shutdown()  // SSH server stops
 ```
 
-The API is **identical**. The only differences are:
-- Configuration details (host, auth, etc.)
-- Operations are serialized as JSON over SSH
-- Stimuli stream back asynchronously
+When `ssh` is configured, an SSH server starts during `boot()` that accepts remote connections. Remote clients connect to the SSH server and invoke operations over the encrypted channel.
 
-**When to use:**
-- Process isolation required
-- Privilege separation needed
-- Running on different machines
-- Secure sandboxing
+**When to add SSH server:**
+- Expose capsule to remote processes
+- Privilege separation (SSH user runs with different permissions)
+- Network isolation and encryption
+- Multi-machine deployments
 
 ## SSH Configuration
 
@@ -67,171 +60,52 @@ The API is **identical**. The only differences are:
 | `workingDir` | string | | home | Working directory on remote |
 | `connectTimeout` | number | | 5000 | Connection timeout in ms |
 
-## How It Works
+## How SSH Server Works
 
-When you call `capsule.boot()` on a remote capsule:
+When you include `ssh` in the capsule definition and call `boot()`:
 
-1. SSH connection established to `host:port`
-2. Remote shell executes: `cd <workingDir> && <capsulePath> serve <remoteName>`
-3. JSONL protocol handler attaches to process stdin/stdout
-4. Boot handshake exchanges metadata
-5. Operations are sent as JSON, responses stream back
-6. Stimuli from the remote process are streamed to local listeners
+1. SSH server starts listening on the configured `host:port`
+2. Remote clients can establish SSH connections
+3. Upon connection, clients are authenticated (key or password)
+4. Clients send JSONL-formatted operation requests
+5. Server processes requests, sends JSONL responses
+6. Stimulus events are streamed to connected clients
+7. On `shutdown()`, the SSH server closes and stops accepting connections
 
-The entire lifecycle uses one SSH connection per capsule instance.
-
-## Key Differences from Local Execution
-
-### Serialization
-
-Parameters and results are JSON-serialized over SSH:
-
-```typescript
-// Local: direct function call
-const result = await capsule.trigger('tmux', 'create', { sessionName: 'dev' })
-
-// Remote: params JSON-stringified, result JSON-parsed
-// Type safety is preserved—TypeScript ensures params match capability definition
-```
-
-### Stimulus Flow
-
-Stimuli are **one-way** for remote capsules (remote → local):
-
-```typescript
-capsule.onStimulus((stimulus) => {
-  console.log("Received:", stimulus.sense)
-})
-
-// Only works for local capsules:
-capsule.emit({ sense: 'test', data: {} })  // Throws if transport is 'ssh'
-```
-
-### Latency
-
-Network RTT adds latency. A 10ms round trip means ~10ms latency per operation. For latency-sensitive apps, minimize cross-boundary calls.
-
-## Common Patterns
-
-### Cancellation
-
-Abort signals work across the network:
-
-```typescript
-const controller = new AbortController()
-setTimeout(() => controller.abort(), 5000)
-
-try {
-  const result = await capsule.trigger(
-    'tmux',
-    'longRunningOp',
-    { duration: 30000 },
-    controller.signal
-  )
-} catch (e) {
-  console.error("Cancelled by user")
-}
-```
-
-### Error Handling
-
-Both connection and operation errors are thrown:
-
-```typescript
-try {
-  await capsule.boot()  // SSH connection errors
-} catch (e) {
-  console.error("Connection failed:", e.message)
-}
-
-try {
-  const result = await capsule.trigger('tmux', 'create', {})
-} catch (e) {
-  console.error("Operation failed:", e.message)  // Remote errors
-}
-```
-
-### Type Safety
-
-The `def` parameter is never sent over SSH—it's only used for compile-time type checking:
-
-```typescript
-// TypeScript verifies this at compile time
-const result = await capsule.trigger('tmux', 'create', { sessionName: 'test' })
-
-// Compile error (capability 'invalid' doesn't exist in def)
-const invalid = await capsule.trigger('invalid', 'op', {})
-```
-
-## Performance & Security
+## Considerations
 
 ### Serialization Overhead
 
-Every operation incurs JSON encode/decode. For high-throughput scenarios, consider batching or data compression.
+When an SSH server is configured, all operations are JSON-serialized over the network. For high-throughput scenarios, consider:
+- Batching operations
+- Compressing large data in stimulus responses
+- Using dedicated streaming channels if latency is critical
+
+### Network Latency
+
+Network RTT adds latency. A 10ms round trip means ~10ms additional latency per operation. For latency-sensitive applications, minimize operations that cross the SSH boundary.
 
 ### SSH Key Management
 
+Store SSH credentials securely:
 - Never commit keys to version control
-- Use environment variables or secure vaults for paths
+- Use environment variables or secure vaults for key paths
 - Restrict key file permissions: `chmod 600`
+- Consider rotating keys regularly
 
-### Isolation
+### Process Isolation
 
-The remote capsule runs with the SSH user's privileges. Use containers, chroot, or seccomp for additional OS-level isolation if needed.
-
-## Comparison: Local vs Remote
-
-| Aspect | Local | Remote |
-|--------|-------|--------|
-| **Latency** | <1ms | 10-100ms+ (network RTT) |
-| **Serialization** | None | JSON |
-| **Process Isolation** | No | Yes |
-| **Stimulus Flow** | Bidirectional | One-way (remote → local) |
-| **Type Safety** | Full | Full (local check) |
-| **Complexity** | Low | Medium (SSH setup) |
-
-## Examples
-
-### Local Capsule
-
-```typescript
-const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'local'
-})
-
-await capsule.boot()
-const result = await capsule.trigger('capability', 'operation', params)
-await capsule.shutdown()
-```
-
-### Remote Capsule
-
-```typescript
-const capsule = Capsule({
-  def: capsuleDef,
-  transport: 'ssh',
-  ssh: {
-    host: 'devbox.example.com',
-    username: 'user',
-    auth: { type: 'key', path: '~/.ssh/id_rsa' },
-    capsulePath: '/usr/local/bin/capsule'
-  },
-  remoteName: 'my-capsule'
-})
-
-await capsule.boot()
-const result = await capsule.trigger('capability', 'operation', params)
-await capsule.shutdown()
-```
-
-The API is identical. Configuration determines behavior.
+The SSH server runs with the privileges of the SSH user. For additional hardening:
+- Run the capsule in a container (Docker, etc.)
+- Use OS-level sandboxing (chroot, seccomp, AppArmor)
+- Restrict the SSH user's capabilities and file access
+- Monitor resource usage (CPU, memory, disk)
 
 ---
 
-## Protocol Reference
+## SSH Protocol Reference
 
-The remote capsule protocol uses **JSONL** (JSON Lines): one JSON message per line, terminated by newline.
+When an SSH server is configured, clients communicate with it using the **JSONL** protocol: one JSON message per line, terminated by newline. This is an implementation detail—you typically don't interact with this directly unless building a custom client.
 
 ### Message Types
 

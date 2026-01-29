@@ -32,7 +32,6 @@ const tmux = defineCapability({
 
 // Create a local capsule
 const capsule = Capsule({
-  def: {
     name: "local-tmux",
     docs: "Local tmux capsule for terminal multiplexing",
     capabilities: [tmux] as const,
@@ -53,8 +52,6 @@ const capsule = Capsule({
         // Cleanup here
       }
     }
-  },
-  transport: 'local'
 })
 
 // Boot the capsule
@@ -82,63 +79,50 @@ await capsule.shutdown()
 unsubscribe()
 ```
 
-## Remote SSH Example
+## With SSH Server
 
-The same definition works over SSH with a different transport config:
+To expose the capsule over SSH, add the `ssh` field to the definition:
 
 ```typescript
 import { Capsule } from "@hexlabs/capsuleer"
 
-// Same definition as above
 const capsule = Capsule({
-  def: {
-    name: "remote-tmux",
-    capabilities: [tmux] as const,
-    senses: [
-      {
-        name: "tmux:session:created",
-        docs: "Emitted when a new session is created",
-        signature: "{ id: string; name: string }"
-      }
-    ],
-    hooks: {
-      async boot({ capsule }) {},
-      async shutdown({ capsule }) {}
+  name: "tmux",
+  docs: "Terminal multiplexer with SSH",
+  capabilities: [tmux] as const,
+  senses: [
+    {
+      name: "tmux:session:created",
+      docs: "Emitted when a new session is created",
+      signature: "{ id: string; name: string }"
+    }
+  ],
+  hooks: {
+    async boot({ capsule }) {
+      // Setup here
+    },
+    async shutdown({ capsule }) {
+      // Cleanup here
     }
   },
-  // Only the transport config differs
-  transport: 'ssh',
+  // SSH server configuration
   ssh: {
-    host: 'devbox.example.com',
-    username: 'tmux-user',
-    auth: { type: 'key', path: '~/.ssh/id_rsa' },
-    capsulePath: '/usr/local/bin/capsule'
-  },
-  remoteName: 'remote-tmux'
+    // Configuration for SSH server that clients connect to
+    // See Transports doc for available options
+  }
 })
 
-// Same API: boot, trigger, listen, shutdown
+// Boot starts the SSH server
 await capsule.boot()
 
+// Remote clients can now connect via SSH and invoke operations
 capsule.onStimulus((stimulus) => {
-  console.log("Stimulus:", stimulus.sense, stimulus.data)
+  console.log("Stimulus from operation:", stimulus.sense, stimulus.data)
 })
-
-const result = await capsule.trigger(
-  "tmux",
-  "create",
-  { sessionName: "my-session" }
-)
-console.log("Result:", result)
 
 await capsule.shutdown()
 ```
 
-The difference from the local example:
-- Capsule runs on a remote machine via SSH
-- Parameters and results are JSON-serialized
-- Stimuli stream back asynchronously
-- Type safety is preserved at compile time
-- No ability to emit stimuli locally (one-way flow)
+The `ssh` field makes this capsule available to remote clients over SSH. The API remains the same—you still use `trigger()` and `onStimulus()` locally.
 
-See [Transports](../transports.md) for detailed configuration options and trade-offs.
+See [Transports](../transports.md) for SSH server configuration options and how remote clients connect.
