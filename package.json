@@ -1,5 +1,5 @@
 {
-  "name": "@thehexlabs/capsuleer",
+  "name": "@arcforge/capsuleer-core",
   "version": "0.0.3",
   "description": "Type-safe capability-based architecture for building modular systems",
   "type": "module",
