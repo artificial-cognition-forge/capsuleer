@@ -4,6 +4,12 @@ export type CapsuleerEvent =
     | TmuxEvent
     | CapsuleEvent
 
+type EventBase = {
+    time: {
+        ms: number
+        seq: number
+    }
+}
 
 type DaemonEvent =
     | { type: "daemon.started"; version: string }

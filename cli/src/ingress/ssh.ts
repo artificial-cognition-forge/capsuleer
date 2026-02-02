@@ -66,7 +66,7 @@ export interface SSHServerInstance {
 export async function createSSHServer(config: SSHServerConfig): Promise<SSHServerInstance> {
   const port = config.port ?? 2222
   const host = config.host ?? 'localhost'
-  const log = config.log ?? (() => {})
+  const log = config.log ?? (() => { })
 
   let sshServer: SSHServer | null = null
   let clientCount = 0
@@ -258,12 +258,12 @@ export async function createSSHServer(config: SSHServerConfig): Promise<SSHServe
         /**
          * Handle client ready (after initial connection)
          */
-        client.on('ready', () => {})
+        client.on('ready', () => { })
 
         /**
          * Handle rekey
          */
-        client.on('rekey', () => {})
+        client.on('rekey', () => { })
 
         /**
          * Handle client disconnect
@@ -272,9 +272,9 @@ export async function createSSHServer(config: SSHServerConfig): Promise<SSHServe
           clientCount--
         })
 
-        client.on('error', (error: any) => {})
+        client.on('error', (error: any) => { })
 
-        client.on('close', () => {})
+        client.on('close', () => { })
       }
     )
 

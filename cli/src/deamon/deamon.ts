@@ -1,3 +1,5 @@
+import tmux from "./tmux"
+
 export const deamon = {
     /** Start the Capsuleer Deamon */
     async start() {
@@ -9,5 +11,9 @@ export const deamon = {
     /** Stop the Capsuleer Deamon */
     async stop() {
 
-    }
+    },
+
+    async restart() {
+
+    },
 }

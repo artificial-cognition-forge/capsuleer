@@ -68,6 +68,34 @@ interface PaneInfo {
 }
 
 export const tmux = {
+    /** Manage the capsuleer tmux server */
+    server: {
+        /**
+         * Start the tmux server (if not already running)
+         */
+        async start() {
+            try {
+                // check if tmux server is alive
+                await exec(["tmux", "ls"]);
+            } catch (err) {
+                // if tmux server is not running, start a dummy session
+                // using -d to detach immediately
+                await exec(["tmux", "new-session", "-d", "-s", "capsuleerd_server"]);
+            }
+        },
+
+        /**
+         * Stop the tmux server entirely (kills all sessions)
+         */
+        async stop() {
+            try {
+                await exec(["tmux", "kill-server"]);
+            } catch (err) {
+                // if server is already down, ignore
+            }
+        },
+    },
+
     session: {
         /**
          * List all active sessions

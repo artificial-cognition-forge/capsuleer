@@ -1,35 +1,3 @@
-type CapsuleSpec = {
-    id: string
-    cwd: string
-    command: string
-    env?: Record<string, string>
-    autostart?: boolean
-    capabilities: CapabilitySet
-}
-
-type CapsuleState = {
-    status: "online" | "offline" | "crashed"
-    pid?: number        // optional, informational
-    startedAt?: number
-}
-type Capsule = {
-    spec: CapsuleSpec
-    state: CapsuleState
-    session: string
-}
-
-type CapabilitySet = {
-    filesystem?: {
-        read?: string[]
-        write?: string[]
-    }
-    network?: {
-        outbound?: boolean
-        inbound?: boolean
-    }
-    secrets?: string[]
-}
-
 /** 
  * Capsule Manager
  * 
@@ -40,6 +8,9 @@ type CapabilitySet = {
  * - route network requests to correct capsule
  * - manage capsule lifecycle
  */
-export function CapsuleManager() {
-
+export const capsulesManager = {
+    async list() { },
+    async get() { },
+    async create() { },
+    async update() { },
 }
