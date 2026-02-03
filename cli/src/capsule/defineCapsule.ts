@@ -1,3 +1,6 @@
+import { randomUUIDv7 } from "bun"
+import tmux from "../capsuled/tmux"
+import { storage } from "../storage/storage"
 import { sandbox } from "./sandbox"
 
 type CapsuleClientMode = "shell" | "bun"
@@ -11,6 +14,7 @@ export type CapsuleBlueprint = {
     env: Record<string, string>
     boot: Promise<void>
     shutdown: Promise<void>
+    scope: any
 }
 
 export type DefineCapsuleInput = {
@@ -18,11 +22,11 @@ export type DefineCapsuleInput = {
     description?: string
 
     env?: Record<string, string>
+    scope?: any
 
     /** setup hook */
     boot?: Promise<void>
 
-    capabilities: CapsuleerCapability[]
 
     /** shutdown hook */
     shutdown?: Promise<void>
@@ -41,7 +45,20 @@ export function defineCapsule(input: DefineCapsuleInput): CapsuleBlueprint {
         env: input.env || {},
         boot: input.boot || Promise.resolve(),
         shutdown: input.shutdown || Promise.resolve(),
+        scope: [],
     }
+}
+
+type CapsuleInstanceState = {
+    capsuleId: string
+    name: string
+
+    tmux: {
+        sessionId: string
+    },
+
+    env: Record<string, string>,
+    scope: any,
 }
 
 /**
@@ -50,73 +67,43 @@ export function defineCapsule(input: DefineCapsuleInput): CapsuleBlueprint {
  * - shell process
  * - bun process
  */
-export async function Capsule(blueprint: CapsuleBlueprint): CapsuleInstance {
-    const capsuleInstanceId = "adw"
+export async function Capsule(blueprint: CapsuleBlueprint) {
+    const state: CapsuleInstanceState = {
+        name: blueprint.name,
+        capsuleId: randomUUIDv7(),
 
-    // spawn bun process
-    const sandboxId = await sandbox.spawn(capsuleInstanceId, blueprint.capabilities)
+        tmux: {
+            sessionId: randomUUIDv7(),
+        },
+
+        env: blueprint.env,
+        scope: blueprint.scope,
+    }
 
     return {
-        id: blueprint.name,
-        tmuxSessionId: "capsuleer",
         blueprint: blueprint,
-        pid: 0,
-        clients: new Set(),
-        resources: {
-            cpuPercent: 0,
-            memoryMB: 0,
-        },
-        network: {
-            outbound: 0,
-            inbound: 0,
-        },
-        status: "starting",
-        lastEventIndex: 0,
+        env: state.env,
+
         async start() {
-            const config = capsuleRegistry[id]
-            if (!config) {
-                throw new Error(`Capsule '${id}' not found in registry`)
-            }
-
-            try {
-                // Check if session already exists
-                const exists = await tmux.session.has(config.tmuxSessionId)
-                if (!exists) {
-                    // Create a new tmux session for this capsule
-                    await tmux.session.create(config.tmuxSessionId, {
-                        windowName: "shell",
-                    })
-                    console.log(`[Capsule] Created capsule '${id}' with tmux session '${config.tmuxSessionId}'`)
-                } else {
-                    console.log(`[Capsule] Capsule '${id}' already running`)
-                }
-
-                return {
-                    ...config,
-                    status: "running",
-                }
-            } catch (error) {
-                console.error(`[Capsule] Failed to create capsule '${id}':`, error)
-                throw error
-            }
+            // Create tmux session with name: capsule-{name}
+            const sessionName = `capsule-${state.name}`
+            await tmux.session.create(sessionName, {
+                windowName: "shell",
+            })
         },
 
         async stop() {
-            const config = capsuleRegistry[id]
+            await tmux.session.kill(state.tmux.sessionId)
+        },
 
-            if (!config) {
-                // throw new Error(`Capsule '${id}' not found in registry`)
-            }
+        async attach() {
+            // TODO: Implement attach
+            // maybe we just need to return the attach details for the manager.
+        },
 
-            try {
-                const exists = await tmux.session.has(config.tmuxSessionId)
-                if (exists) {
-                    await tmux.session.kill(config.tmuxSessionId)
-                    console.log(`[Capsule] Stopped capsule '${id}'`)
-                }
-            } catch (error) {
-                console.error(`[Capsule] Failed to stop capsule '${id}':`, error)
-            }
+        ts: {
+            /** Execute a ts command */
+            async exec() { },
         },
     }
 }
@@ -125,35 +112,7 @@ type CapsuleFolder = {
     "capsule.ts": CapsuleBlueprint
 }
 
-export type CapsuleInstance = {
-    id: string                      // unique capsule ID
-    tmuxSessionId: string
-    sandboxId: string
-    blueprint: CapsuleBlueprint
-
-    /** process id */
-    pid: number
-
-    /** Network connections. */
-    clients: Set<string>
-
-    resources: {
-        cpuPercent: number
-        memoryMB: number
-    }
-
-    network: {
-        outbound: number
-        inbound: number
-    }
-
-    status: "starting" | "running" | "paused" | "stopped"
-    lastEventIndex: number
-
-    attach: (options: CapsuleAttachOptions) => Promise<void>
-    start: () => Promise<void>
-    stop: () => Promise<void>
-}
+export type CapsuleInstance = Awaited<ReturnType<typeof Capsule>>
 
 type CapsuleAttachOptions = {
     mode?: CapsuleClientMode

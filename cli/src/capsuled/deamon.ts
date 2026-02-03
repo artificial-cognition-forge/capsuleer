@@ -1,10 +1,12 @@
 import { storage } from "../storage/storage"
 import tmux from "./tmux"
-import { CapsuleManager } from "./capsule-manager"
+import { CapsuleManager, type CapsuleManagerInstance } from "./capsule-manager"
 import { trace, type CapsuleerTrace } from "./trace"
 import { setTraceContext, clearTraceContext, getTrace } from "./traceContext"
 import { randomUUIDv7, spawn } from "bun"
 import { ssh } from "../ingress/ssh/ssh"
+import { homedir } from "os"
+import { join } from "path"
 
 type SSHStatus = {
     status: string
@@ -20,14 +22,16 @@ type CapsuleerDeamonStatus = {
 
 type CapsuleerRuntimeCtx = {
     daemonInstanceId: string
-    capsuleManager: CapsuleManager
+    capsuleManager: CapsuleManagerInstance
     trace: CapsuleerTrace
-    ssh: SSHServerInstance
 }
 
+const CAPSULE_CONNECT_STRING_FORMAT = "user@host:port/capsule-name"
+
+/** Capsuleer Daemon */
 export const daemon = {
-    /** Start the Capsuleer Deamon (blocking - for systemd/launchd) */
-    async start() {
+    /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
+    async runtime() {
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
@@ -40,7 +44,6 @@ export const daemon = {
             daemonInstanceId,
             capsuleManager: manager,
             trace: log,
-            ssh: server,
         }
 
         // emit startup event
@@ -55,44 +58,43 @@ export const daemon = {
         // start tmux
         await tmux.server.start()
 
+        // start all capsules
+        await manager.start()
+
         // start ssh server and wait for it to be ready
         await server.start()
 
-        return ctx
+        // The SSH server continues handling requests in the background
+        // Block forever until signal (Ctrl+C or systemd stop)
+        await new Promise<void>((resolve) => {
+            const handleShutdown = async () => {
+                console.log("\nShutting down gracefully...")
+                await daemon.stop()
+                resolve()
+            }
+
+            process.on('SIGTERM', handleShutdown)
+            process.on('SIGINT', handleShutdown)
+        })
     },
 
     /** Start daemon in background and return immediately */
     async up() {
-        // First check if daemon is already running
-        const health = await daemon.health()
-        if (health.healthy) {
-            console.log("Daemon is already running")
+        // Check if SSH is already running on port 2424
+        const sshHealth = await ssh().health()
+        if (sshHealth.status === "running") {
+            console.log("Daemon is already running on port " + sshHealth.port)
             return
         }
 
-        // Write a simple shell script to daemonize properly
-        const { writeFileSync } = await import("fs")
-        const { tmpdir, homedir } = await import("os")
-        const { join } = await import("path")
-
         const logsDir = join(homedir(), ".capsuleer", "logs")
-        const { mkdirSync } = await import("fs")
-        try {
-            mkdirSync(logsDir, { recursive: true })
-        } catch (e) {
-            // ignore
-        }
-
         const logFile = join(logsDir, "daemon.log")
-        const scriptPath = join(tmpdir(), `capsuleer-daemon-${Date.now()}.sh`)
-        const script = `#!/bin/bash
-exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
-`
-        writeFileSync(scriptPath, script)
+        const scriptsDir = join(import.meta.dirname, "../scripts")
+        const startScript = join(scriptsDir, "daemon/start.sh")
 
-        // Spawn the shell script
+        // Spawn the start script with log file argument
         const proc = spawn({
-            cmd: ["bash", scriptPath],
+            cmd: ["bash", startScript, logFile],
             detached: true,
             stdio: ["ignore", "ignore", "ignore"],
         })
@@ -101,23 +103,23 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
         proc.unref()
 
         console.log("Daemon started in background (logs at " + logFile + ")")
-
-        // Give it a moment to start up
-        await new Promise(resolve => setTimeout(resolve, 1500))
     },
 
     /** Stop daemon in background and return immediately */
     async down() {
-        // Check if daemon is running
-        const health = await daemon.health()
-        if (!health.running) {
+        // Check if SSH is running
+        const sshHealth = await ssh().health()
+        if (sshHealth.status !== "running") {
             console.log("Daemon is not running")
             return
         }
 
-        // Kill the daemon process by finding the process listening on port 2424
+        const scriptsDir = join(import.meta.dirname, "../scripts")
+        const stopScript = join(scriptsDir, "daemon/stop.sh")
+
+        // Spawn the stop script with port argument
         const proc = spawn({
-            cmd: ["bash", "-c", "lsof -ti :2424 | xargs kill -TERM 2>/dev/null || true"],
+            cmd: ["bash", stopScript, "2424"],
             detached: true,
         })
 
@@ -138,6 +140,7 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
             reason: "signal",
         })
 
+        await ssh().stop()
         await tmux.server.stop()
         clearTraceContext()
     },
@@ -145,7 +148,7 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
     /** Restart the Capsuleer Deamon */
     async restart() {
         await daemon.stop()
-        await daemon.start()
+        await daemon.runtime()
     },
 
     /** Get the current status of the Capsuleer Deamon */
@@ -188,7 +191,18 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
     },
 
     /** Daemon capsules */
-    capsules: {},
+    capsules: {
+        // hook up with the manager
+        async list() {
+            const manager = await CapsuleManager()
+            return await manager.list()
+        },
+
+        /** Attach to a capsule via SSH. */
+        async attach(url: string, options: CapsuleAttachOptions) {
+            // 
+        },
+    },
 
     /** Write ctl script to disk */
     install: storage.capsuled.install,

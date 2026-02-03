@@ -1,115 +1,97 @@
-import type { CapsuleInstance } from "types/capsule"
-import { connectToCapsule } from "../ingress/ssh/client"
-import tmux from "./tmux"
-import { getTrace } from "./traceContext"
+import { Capsule, type CapsuleBlueprint, type CapsuleInstance } from "../capsule/defineCapsule"
 
-/**
- * Capsule Manager
- *
- * Manages capsules and their lifecycle.
- *
- * **role**
- * - Mediate capsule requests
- * - route network requests to correct capsule
- * - manage capsule lifecycle
- */
-export type Capsule = {
-    id: string
-    name: string
-    tmuxSessionId: string
-    status: "running" | "stopped"
-}
-
-type CapsuleConfig = {
-    id: string
-    name: string
-    tmuxSessionId: string
-}
-
-export const capsuleRegistry: Record<string, CapsuleConfig> = {
+// Stub for now, later this will stored on disk
+export const capsuleRegistry: Record<string, CapsuleBlueprint> = {
     default: {
-        id: "default",
         name: "default",
-        tmuxSessionId: "capsule-default",
+        boot: Promise.resolve(),
+        shutdown: Promise.resolve(),
+        scope: {},
+        env: {},
     },
 }
 
-/** 
- * Capsule Manager
- * 
- * Manages capsule instances for the lifetime
- * of the daemon.
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let instance: CapsuleManagerInstance | null = null
+let bootPromise: Promise<CapsuleManagerInstance> | null = null
+
+export type CapsuleManagerInstance = {
+    start(): Promise<void>
+    list(): Promise<CapsuleInstance[]>
+    get(id: string): Promise<CapsuleInstance | null>
+    attach(name: string, options: CapsuleAttachOptions): Promise<void>
+}
+
+type CapsuleAttachOptions = {
+    interface?: "shell" | "typescript"
+    pty?: {
+        enabled?: boolean
+        term?: string
+        cols?: number
+        rows?: number
+    }
+}
+
+/**
+ * Capsule Manager Singleton
+ *
+ * Returns the same instance on every call, auto-booting if needed.
+ * Ensures only one CapsuleManager exists for the daemon lifetime.
  */
-export async function CapsuleManager() {
+export async function CapsuleManager(): Promise<CapsuleManagerInstance> {
+    // If already instantiated, return immediately
+    if (instance !== null) {
+        return instance
+    }
+
+    // If currently booting, wait for that boot to complete
+    if (bootPromise !== null) {
+        return bootPromise
+    }
+
+    // Start boot process
+    bootPromise = createCapsuleManager()
+    instance = await bootPromise
+    bootPromise = null
+
+    return instance
+}
+
+// ============================================================================
+// INTERNAL: Create manager instance
+// ============================================================================
+
+async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
+    const capsuleConfigs = Object.values(capsuleRegistry)
     const capsules = new Map<string, CapsuleInstance>()
 
-    // load capsule blueprints
-    // boot capsules
+    // Create (but don't start) all capsules
+    for (const config of capsuleConfigs) {
+        const capsule = await Capsule(config)
+        capsules.set(config.name, capsule)
+    }
 
     return {
-        /** Boot all capsules. */
         async start() {
-            // for (capsule of capsules) {
-
-            // }
-        },
-
-        /** List all capsules */
-        async list(): Promise<Capsule[]> {
-            const sessions = await tmux.session.list()
-
-            return Object.values(capsuleRegistry).map((config) => ({
-                ...config,
-                status: sessions.some((s) => s.name === config.tmuxSessionId) ? "running" : "stopped",
-            }))
-        },
-
-        /** Get a specific capsule by id */
-        async get(id: string): Promise<Capsule | null> {
-            const config = capsuleRegistry[id]
-            if (!config) return null
-
-            const sessions = await tmux.session.list()
-            return {
-                ...config,
-                status: sessions.some((s) => s.name === config.tmuxSessionId) ? "running" : "stopped",
+            // Start all capsules
+            for (const capsule of capsules.values()) {
+                await capsule.start()
             }
         },
 
-        /**
-         * Connect to a capsule via SSH
-         *
-         * Establishes an SSH connection to a capsule and attaches to its tmux session.
-         * Uses key-based authentication.
-         *
-         * @param capsuleId - The ID of the capsule to connect to (default: "default")
-         * @param options - Connection options (privateKeyPath, username, port)
-         */
-        async connect(
-            capsuleId: string = "default",
-            options?: {
-                privateKeyPath?: string
-                username?: string
-                port?: number
-            }
-        ) {
-            try {
-                console.log(`[CLI] Connecting to capsule '${capsuleId}'...`)
-                getTrace().push({
-                    type: "capsule.spawned",
-                    capsuleId,
-                    command: "connect",
-                })
-                await connectToCapsule(capsuleId, options)
-            } catch (error) {
-                console.error(`[CLI] Failed to connect to capsule '${capsuleId}':`, error)
-                getTrace().push({
-                    type: "capsule.exited",
-                    capsuleId,
-                    code: 1,
-                })
-                throw error
-            }
+        async list(): Promise<CapsuleInstance[]> {
+            return Array.from(capsules.values())
+        },
+
+        async get(id: string): Promise<CapsuleInstance | null> {
+            return capsules.get(id) || null
+        },
+
+        async attach(name: string, options: CapsuleAttachOptions) {
+            // Implementation
         },
     }
 }

@@ -31,7 +31,10 @@ export function trace() {
             if (DEBUG) console.log(eventWithTime)
             log.push(eventWithTime)
             callbacks.forEach(cb => cb(eventWithTime))
-            storage.log.append(getInstanceId(), eventWithTime)
+            // Fire and forget - don't block on disk I/O
+            storage.log.append(getInstanceId(), eventWithTime).catch((err) => {
+                console.error("Failed to append to trace log:", err)
+            })
         },
 
         onEvent: (cb: (event: CapsuleerEvent) => void) => {

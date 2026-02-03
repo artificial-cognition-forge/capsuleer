@@ -7,14 +7,13 @@ export async function main() {
     try {
         // Top-level commands
         if (command === "daemon") {
-            if (subcommand === "start") {
-                await cli.daemon.start()
+            if (subcommand === "runtime") {
                 // Keep the daemon running - block forever
                 console.log("Daemon started. Press Ctrl+C to stop.")
-                await new Promise(() => {
-                    // Never resolves - keeps process alive
-                })
+                await cli.daemon.runtime()
+                return
             }
+
             if (subcommand === "health") {
                 return await cli.daemon.health()
             }
@@ -45,12 +44,8 @@ export async function main() {
         }
 
         if (command === "start") {
-            await cli.daemon.start()
-            // Keep the daemon running - block forever
-            console.log("Daemon started. Press Ctrl+C to stop.")
-            await new Promise(() => {
-                // Never resolves - keeps process alive
-            })
+            await cli.daemon.runtime()
+            return
         }
 
         if (command === "up") {
@@ -103,16 +98,19 @@ export async function main() {
                 return
             }
 
-            if (subcommand === "connect") {
-                const capsuleId = args[2] || "default"
-                const privateKeyPath = args[3]
-                const username = args[4]
-
-                await cli.capsule.connect(capsuleId, {
-                    privateKeyPath,
-                    username,
-                })
-
+            if (subcommand === "attach") {
+                const connString = args[2]
+                if (!connString) {
+                    console.error("capsule attach requires a connection string")
+                    console.error("Format: capsuleer capsule attach [user@]host:port/capsule-name")
+                    console.error("Examples:")
+                    console.error("  capsuleer capsule attach localhost:2424/default")
+                    console.error("  capsuleer capsule attach user@127.0.0.1:2424/myapp")
+                    process.exit(1)
+                }
+                const keyFlagIndex = args.findIndex(arg => arg.startsWith("--key="))
+                const key = keyFlagIndex !== -1 ? args[keyFlagIndex].slice(6) : undefined
+                await cli.capsule.attach(connString, { key })
                 return
             }
         }

@@ -1,4 +1,3 @@
-import type { ReturnType } from "bun"
 import { trace } from "./trace"
 
 let activeTrace: ReturnType<typeof trace> | null = null
@@ -10,7 +9,10 @@ export function setTraceContext(traceInstance: ReturnType<typeof trace>, instanc
 }
 
 export function getTrace() {
-    if (!activeTrace) return null
+    if (!activeTrace) {
+        console.error("Trace not initialized. Did you call setTraceContext()?")
+        return null as ReturnType<typeof trace>
+    }
     return activeTrace
 }
 

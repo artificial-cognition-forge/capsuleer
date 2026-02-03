@@ -2,6 +2,8 @@ import { daemon } from "./capsuled/deamon"
 import { auth } from "./ingress/auth"
 import { help } from "./help"
 import { tail } from "./commands/tail"
+import { attachCommand } from "./commands/attach"
+import { CapsuleManager } from "./capsuled/capsule-manager"
 
 export const cli = {
     daemon: daemon,
@@ -10,7 +12,7 @@ export const cli = {
     stop: daemon.stop,
 
     /** Start the daemon. */
-    start: daemon.start,
+    start: daemon.runtime,
 
     /** Start daemon in background (non-blocking) */
     up: daemon.up,
@@ -21,26 +23,28 @@ export const cli = {
     /** Check daemon health. */
     health: daemon.health,
 
-    /** Manage remote capsules. */
+    /** Manage local capsules. */
     capsule: {
-        /** List all remote capsules. */
-        async list() { },
+        /** List all local capsules. */
+        async list() {
+            const manager = await CapsuleManager()
+            const capsules = await manager.list()
+            if (capsules.length === 0) {
+                console.log("No capsules running")
+                return
+            }
+            console.log(`Capsules (${capsules.length}):`)
+            for (const capsule of capsules) {
+                console.log(`  - ${capsule.blueprint.name}`)
+            }
+        },
 
-        /** 
-         * Connect to a remote capsule. 
-         * 
-         * modes: "shell" | "bun"
-         * 
-         * **Shell**
-         * A default shell instance.
-         * 
-         * **Bun**
-         * Bun will load you into a sandboxed ts environment
-         * loaded with the capsule's capabilities.
-         */
-        async connect() { },
-
+        /** Attach to a capsule via SSH. */
+        async attach(connString: string, options?: { key?: string }) {
+            await attachCommand(connString, options)
+        },
     },
+
     /** Authenticate with remote capsules. */
     auth: auth,
 

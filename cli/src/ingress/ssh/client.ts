@@ -72,8 +72,8 @@ export async function connectToSSH(
                     stream.stderr.pipe(process.stderr)
                     process.stdin.pipe(stream)
 
-                    // Send tmux attach command
-                    stream.write(`tmux attach-session -t ${sessionName}\n`)
+                    // Send tmux attach command to connect to the capsule's tmux session
+                    stream.write(`exec tmux attach-session -t ${sessionName}\n`)
 
                     stream.on("close", () => {
                         client.end()
