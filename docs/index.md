@@ -32,7 +32,7 @@ const capsule = Capsule({
   capabilities: [...],
   ssh: {
     host: '0.0.0.0',
-    port: 2222,
+    port: 2423,
     auth: { type: 'key', path: '/etc/capsule/key' }
   }
 })

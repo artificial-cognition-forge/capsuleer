@@ -49,9 +49,9 @@ export async function CapsuleManager() {
     return {
         /** Boot all capsules. */
         async start() {
-            for (capsule of capsules) {
+            // for (capsule of capsules) {
 
-            }
+            // }
         },
 
         /** List all capsules */

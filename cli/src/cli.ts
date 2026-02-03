@@ -21,7 +21,7 @@ export const cli = {
     /** Check daemon health. */
     health: daemon.health,
 
-    /** Manage capsules. */
+    /** Manage remote capsules. */
     capsule: {
         /** List all remote capsules. */
         async list() { },

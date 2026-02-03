@@ -32,7 +32,7 @@ export type SSHConfig = {
  * SSH server configuration (for hosting a capsule via SSH)
  */
 export type SSHServerConfig = {
-    /** Port to listen on (default: 2222) */
+    /** Port to listen on (default: 2423) */
     port?: number
     /** Host to bind to (default: 'localhost') */
     host?: string

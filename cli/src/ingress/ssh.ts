@@ -2,13 +2,13 @@
  * SSH SERVER FOR CAPSULE
  *
  * Exposes shell command execution over SSH.
- * - Listens on configurable port (default 2222)
+ * - Listens on configurable port (default 2423)
  * - Authenticates via public key
  * - Routes SSH channels to command execution via Bun.spawn()
  * - Streams command output back over SSH
  *
  * Usage in capsule boot hook:
- *   const sshServer = await createSSHServer({ port: 2222, hostKeyPath: '/path/to/id_ed25519' })
+ *   const sshServer = await createSSHServer({ port: 2423, hostKeyPath: '/path/to/id_ed25519' })
  *   // In shutdown: await sshServer.shutdown()
  */
 
@@ -19,7 +19,7 @@ import { readFileSync } from 'fs'
  * SSH Server configuration
  */
 export interface SSHServerConfig {
-  /** Port to listen on (default: 2222) */
+  /** Port to listen on (default: 2423) */
   port?: number
   /** Host to bind to (default: 'localhost') */
   host?: string
@@ -57,14 +57,14 @@ export interface SSHServerInstance {
  *
  * @example
  * const sshServer = await createSSHServer({
- *   port: 2222,
+ *   port: 2423,
  *   hostKeyPath: '/home/user/.ssh/id_ed25519'
  * })
  * // ... capsule runs ...
  * await sshServer.shutdown()
  */
 export async function createSSHServer(config: SSHServerConfig): Promise<SSHServerInstance> {
-  const port = config.port ?? 2222
+  const port = config.port ?? 2423
   const host = config.host ?? 'localhost'
   const log = config.log ?? (() => { })
 

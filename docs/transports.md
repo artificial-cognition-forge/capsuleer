@@ -27,7 +27,7 @@ const capsule = Capsule({
   capabilities: [capability1, capability2],
   ssh: {
     host: '0.0.0.0',
-    port: 2222,
+    port: 2423,
     auth: { type: 'key', path: '/path/to/private/key' },
     // Other SSH server options...
   }

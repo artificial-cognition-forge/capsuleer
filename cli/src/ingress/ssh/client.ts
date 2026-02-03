@@ -156,7 +156,7 @@ export async function connectToCapsule(
     capsuleId: string,
     options: { port?: number; username?: string; privateKeyPath?: string } = {}
 ): Promise<void> {
-    const port = options.port || 2222
+    const port = options.port || 2423
     const username = options.username || process.env.USER || "root"
 
     return connectToSSH(`capsule-${capsuleId}`, {

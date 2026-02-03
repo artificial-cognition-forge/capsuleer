@@ -31,37 +31,10 @@ function SSHServer() {
         const clientId = ++clientIdCounter
         activeClients.add(clientId)
         client.on("authentication", async (ctx) => {
-            // if (ctx.method === "publickey") {
-            //     try {
-            //         // ctx.key.data contains the SSH wire format public key data
-            //         // ctx.key.algo contains the key algorithm (e.g., 'ssh-ed25519')
-            //         const publicKeyData = ctx.key.data // Buffer
-            //         const keyAlgo = ctx.key.algo // e.g., 'ssh-ed25519'
-
-            //         // Format: "ssh-ed25519 <base64-encoded-key> [comment]"
-            //         const publicKeyB64 = publicKeyData.toString("base64")
-            //         const publicKeyStr = `${keyAlgo} ${publicKeyB64}`.trim()
-
-            //         const isAuthorized = await verifyPublicKey(publicKeyStr)
-
-            //         if (isAuthorized) {
-            //             console.log(`[SSH] Client authenticated: ${isAuthorized.name}`)
-            //             ctx.accept()
-            //         } else {
-            //             console.log(
-            //                 `[SSH] Authentication rejected: unknown public key`
-            //             )
-            //             ctx.reject()
-            //         }
-            //     } catch (error) {
-            //         console.error(`[SSH] Authentication error:`, error)
-            //         ctx.reject()
-            //     }
-            // } else {
-            //     // For any other method (none, password, etc), just reject
-            //     console.log(`[SSH] Rejecting ${ctx.method} auth`)
-            //     ctx.reject()
-            // }
+            // TODO: Implement proper public key authentication
+            // For now, accept all connections for testing
+            console.log(`[SSH] Auth attempt: ${ctx.method}`)
+            ctx.accept()
         })
 
         client.on("ready", () => {
@@ -165,7 +138,7 @@ function SSHServer() {
 
     return {
         /** Start the SSH server */
-        async start(port: number = 2222): Promise<void> {
+        async start(port: number = 2424): Promise<void> {
             if (isListening) {
                 throw new Error(`SSH server is already listening on port ${listeningPort}`)
             }
@@ -217,26 +190,26 @@ function SSHServer() {
         },
 
         async health(): Promise<{ status: string; port: number; clients: number }> {
-            // Try port 2222 - the default SSH port
+            // Try port 2424 - capsuleer SSH port
             return new Promise((resolve) => {
                 const socket = require("net").createConnection({
                     host: "127.0.0.1",
-                    port: 2222,
+                    port: 2424,
                     timeout: 500,
                 })
 
                 socket.on("connect", () => {
-                    console.log(`[SSH] Health check: connected successfully to port 2222`)
+                    console.log(`[SSH] Health check: connected successfully to port 2424`)
                     socket.destroy()
                     resolve({
                         status: "running",
-                        port: 2222,
+                        port: 2424,
                         clients: activeClients.size,
                     })
                 })
 
                 socket.on("error", (err: any) => {
-                    console.log(`[SSH] Health check: connection error to port 2222:`, err.message)
+                    console.log(`[SSH] Health check: connection error to port 2424:`, err.message)
                     socket.destroy()
                     resolve({
                         status: "stopped",
@@ -246,7 +219,7 @@ function SSHServer() {
                 })
 
                 socket.on("timeout", () => {
-                    console.log(`[SSH] Health check: connection timeout to port 2222`)
+                    console.log(`[SSH] Health check: connection timeout to port 2424`)
                     socket.destroy()
                     resolve({
                         status: "stopped",

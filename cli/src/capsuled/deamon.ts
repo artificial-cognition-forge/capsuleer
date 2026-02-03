@@ -22,6 +22,7 @@ type CapsuleerRuntimeCtx = {
     daemonInstanceId: string
     capsuleManager: CapsuleManager
     trace: CapsuleerTrace
+    ssh: SSHServerInstance
 }
 
 export const daemon = {
@@ -30,6 +31,7 @@ export const daemon = {
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
+        const server = ssh()
 
         // Set global trace context for all modules
         setTraceContext(log, daemonInstanceId)
@@ -38,6 +40,7 @@ export const daemon = {
             daemonInstanceId,
             capsuleManager: manager,
             trace: log,
+            ssh: server,
         }
 
         // emit startup event
@@ -53,7 +56,7 @@ export const daemon = {
         await tmux.server.start()
 
         // start ssh server and wait for it to be ready
-        await ssh().start()
+        await server.start()
 
         return ctx
     },
@@ -112,9 +115,9 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
             return
         }
 
-        // Kill the daemon process by finding the process listening on port 2222
+        // Kill the daemon process by finding the process listening on port 2424
         const proc = spawn({
-            cmd: ["bash", "-c", "lsof -ti :2222 | xargs kill -TERM 2>/dev/null || true"],
+            cmd: ["bash", "-c", "lsof -ti :2424 | xargs kill -TERM 2>/dev/null || true"],
             detached: true,
         })
 
@@ -183,6 +186,9 @@ exec nohup capsuleer daemon start >> ${logFile} 2>&1 &
             return res
         }
     },
+
+    /** Daemon capsules */
+    capsules: {},
 
     /** Write ctl script to disk */
     install: storage.capsuled.install,

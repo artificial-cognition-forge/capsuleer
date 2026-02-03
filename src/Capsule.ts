@@ -42,7 +42,7 @@ export function Capsule<
         if (!config) return null
 
         const host = config.host ?? 'localhost'
-        const port = config.port ?? 2222
+        const port = config.port ?? 2423
         const username = config.username ?? 'capsule'
 
         try {
