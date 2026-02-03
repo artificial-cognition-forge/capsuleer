@@ -1,4 +1,5 @@
 import { spawn, type Subprocess } from "bun";
+import { getTrace } from "./traceContext";
 
 export interface TmuxError extends Error {
     code: number;
@@ -12,37 +13,6 @@ function isTmuxError(error: unknown): error is TmuxError {
         "stderr" in error &&
         typeof (error as any).code === "number"
     );
-}
-
-/**
- * Execute a tmux command and return the output
- */
-async function exec(args: string[]): Promise<string> {
-    const proc = spawn(["tmux", ...args], {
-        stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-        const error = new Error(`tmux command failed: ${args.join(" ")}`) as TmuxError;
-        error.code = exitCode;
-        error.stderr = stderr;
-        throw error;
-    }
-
-    return stdout.trim();
-}
-
-/**
- * Spawn a long-running tmux process (new session, attach, etc)
- */
-function spawnProcess(args: string[]): Subprocess<"inherit", "pipe", "pipe"> {
-    return spawn(["tmux", ...args], {
-        stdio: ["inherit", "pipe", "pipe"],
-    });
 }
 
 interface SessionInfo {
@@ -68,6 +38,37 @@ interface PaneInfo {
 }
 
 export const tmux = {
+    /**
+     * Execute a tmux command and return the output
+     */
+    async exec(args: string[]): Promise<string> {
+        const proc = spawn(["tmux", ...args], {
+            stdio: ["ignore", "pipe", "pipe"],
+        })
+
+        const stdout = await new Response(proc.stdout).text();
+        const stderr = await new Response(proc.stderr).text();
+        const exitCode = await proc.exited;
+
+        if (exitCode !== 0) {
+            const error = new Error(`tmux command failed: ${args.join(" ")}`) as TmuxError;
+            error.code = exitCode;
+            error.stderr = stderr;
+            throw error;
+        }
+
+        return stdout.trim();
+    },
+
+    /**
+     * Spawn a long-running tmux process (new session, attach, etc)
+     */
+    async spawn(args: string[]): Promise<Subprocess<"inherit", "pipe", "pipe">> {
+        return spawn(["tmux", ...args], {
+            stdio: ["inherit", "pipe", "pipe"],
+        })
+    },
+
     /** Manage the capsuleer tmux server */
     server: {
         /**
@@ -76,11 +77,19 @@ export const tmux = {
         async start() {
             try {
                 // check if tmux server is alive
-                await exec(["tmux", "ls"]);
+                await tmux.exec(["ls"]);
+                getTrace().push({
+                    type: "tmux.server.started",
+                    serverId: "default",
+                });
             } catch (err) {
                 // if tmux server is not running, start a dummy session
                 // using -d to detach immediately
-                await exec(["tmux", "new-session", "-d", "-s", "capsuleerd_server"]);
+                await tmux.exec(["new-session", "-d", "-s", "capsuleerd_server"]);
+                getTrace().push({
+                    type: "tmux.server.started",
+                    serverId: "default",
+                });
             }
         },
 
@@ -89,7 +98,11 @@ export const tmux = {
          */
         async stop() {
             try {
-                await exec(["tmux", "kill-server"]);
+                await tmux.exec(["kill-server"]);
+                getTrace().push({
+                    type: "tmux.server.stopped",
+                    serverId: "default",
+                });
             } catch (err) {
                 // if server is already down, ignore
             }
@@ -102,7 +115,7 @@ export const tmux = {
          */
         async list(): Promise<SessionInfo[]> {
             try {
-                const output = await exec([
+                const output = await tmux.exec([
                     "list-sessions",
                     "-F",
                     "#{session_name}|#{session_windows}|#{session_created}",
@@ -139,21 +152,31 @@ export const tmux = {
             if (options.cwd) {
                 args.push("-c", options.cwd);
             }
-            await exec(args);
+            await tmux.exec(args);
+            getTrace().push({
+                type: "tmux.session.created",
+                serverId: "default",
+                session: name,
+            });
         },
 
         /**
          * Kill a session by name
          */
         async kill(name: string): Promise<void> {
-            await exec(["kill-session", "-t", name]);
+            await tmux.exec(["kill-session", "-t", name]);
+            getTrace().push({
+                type: "tmux.session.killed",
+                serverId: "default",
+                session: name,
+            });
         },
 
         /**
          * Kill all sessions
          */
         async killAll(): Promise<void> {
-            await exec(["kill-server"]);
+            await tmux.exec(["kill-server"]);
         },
 
         /**
@@ -161,7 +184,7 @@ export const tmux = {
          */
         async has(name: string): Promise<boolean> {
             try {
-                await exec(["has-session", "-t", name]);
+                await tmux.exec(["has-session", "-t", name]);
                 return true;
             } catch {
                 return false;
@@ -180,14 +203,14 @@ export const tmux = {
          * Rename a session
          */
         async rename(oldName: string, newName: string): Promise<void> {
-            await exec(["rename-session", "-t", oldName, newName]);
+            await tmux.exec(["rename-session", "-t", oldName, newName]);
         },
 
         /**
          * Attach to a session (spawns interactive process)
          */
         attach(name: string): void {
-            spawnProcess(["attach-session", "-t", name]);
+            tmux.spawn(["attach-session", "-t", name]);
         },
     },
 
@@ -196,7 +219,7 @@ export const tmux = {
          * List windows in a session
          */
         async list(session: string): Promise<WindowInfo[]> {
-            const output = await exec([
+            const output = await tmux.exec([
                 "list-windows",
                 "-t",
                 session,
@@ -224,7 +247,7 @@ export const tmux = {
             if (name) {
                 args.push("-n", name);
             }
-            return exec(args);
+            return tmux.exec(args);
         },
 
         /**
@@ -233,7 +256,7 @@ export const tmux = {
         async kill(session: string, window: string | number): Promise<void> {
             const target =
                 typeof window === "number" ? `${session}:${window}` : `${session}:${window}`;
-            await exec(["kill-window", "-t", target]);
+            await tmux.exec(["kill-window", "-t", target]);
         },
 
         /**
@@ -246,7 +269,7 @@ export const tmux = {
         ): Promise<void> {
             const target =
                 typeof window === "number" ? `${session}:${window}` : `${session}:${window}`;
-            await exec(["rename-window", "-t", target, newName]);
+            await tmux.exec(["rename-window", "-t", target, newName]);
         },
 
         /**
@@ -263,7 +286,7 @@ export const tmux = {
             if (options.percentage) {
                 args.push("-p", options.percentage.toString());
             }
-            await exec(args);
+            await tmux.exec(args);
         },
 
         /**
@@ -280,7 +303,7 @@ export const tmux = {
             if (options.percentage) {
                 args.push("-p", options.percentage.toString());
             }
-            await exec(args);
+            await tmux.exec(args);
         },
     },
 
@@ -291,7 +314,7 @@ export const tmux = {
         async list(session: string, window: string | number): Promise<PaneInfo[]> {
             const target =
                 typeof window === "number" ? `${session}:${window}` : `${session}:${window}`;
-            const output = await exec([
+            const output = await tmux.exec([
                 "list-panes",
                 "-t",
                 target,
@@ -325,7 +348,7 @@ export const tmux = {
             if (enter) {
                 args.push("Enter");
             }
-            await exec(args);
+            await tmux.exec(args);
         },
 
         /**
@@ -356,14 +379,14 @@ export const tmux = {
             if (options.endLine !== undefined) {
                 args.push("-E", options.endLine.toString());
             }
-            return exec(args);
+            return tmux.exec(args);
         },
 
         /**
          * Resize a pane
          */
         async resize(target: string, width: number, height: number): Promise<void> {
-            await exec([
+            await tmux.exec([
                 "resize-pane",
                 "-t",
                 target,
@@ -378,7 +401,7 @@ export const tmux = {
          * Select a pane
          */
         async select(target: string): Promise<void> {
-            await exec(["select-pane", "-t", target]);
+            await tmux.exec(["select-pane", "-t", target]);
         },
     },
 
@@ -386,15 +409,8 @@ export const tmux = {
      * Get the version of tmux
      */
     async version(): Promise<string> {
-        return exec(["-V"]);
+        return tmux.exec(["-V"]);
     },
-
-    /**
-     * Execute a raw tmux command
-     */
-    async raw(args: string[]): Promise<string> {
-        return exec(args);
-    },
-};
+}
 
 export default tmux;

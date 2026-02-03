@@ -3,19 +3,18 @@
   "version": "0.0.1",
   "description": "CLI for capsuleer - capability-based architecture tooling",
   "type": "module",
-  "main": "./index.ts",
   "bin": {
-    "capsuleer": "./bin/cli.ts"
+    "capsuleer": "./bin/capsuleer.ts"
   },
   "scripts": {
-    "dev": "bun run bin/cli.ts",
-    "build": "bun build ./bin/cli.ts --outfile ./dist/capsuleer",
+    "dev": "bun run src/index.ts",
     "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@thehexlabs/capsuleer": ".."
+    "@arcforge/capsuleer": "..",
+    "@arcforge/capsuleer-core": "/home/cody/git/capsuleer"
   }
 }

@@ -3,6 +3,7 @@ export type CapsuleerEvent =
     | SSHEvent
     | TmuxEvent
     | CapsuleEvent
+    | CtlEvent
 
 type EventBase = {
     time: {
@@ -17,6 +18,8 @@ type DaemonEvent =
     | { type: "daemon.restarted"; previousPid: number }
 
 type SSHEvent =
+    | { type: "ssh.start"; port: number }
+    | { type: "ssh.stop" }
     | { type: "ssh.connect"; host: string; user: string }
     | { type: "ssh.disconnect"; host: string; reason?: string }
     | { type: "ssh.error"; host: string; error: string }
@@ -32,3 +35,11 @@ type CapsuleEvent =
     | { type: "capsule.output"; capsuleId: string; bytes: number }
     | { type: "capsule.input"; capsuleId: string; bytes: number }
     | { type: "capsule.exited"; capsuleId: string; code: number | null }
+
+type CtlEvent =
+    | { type: "ctl.install.started"; platform: "linux" | "darwin" | "win32" }
+    | { type: "ctl.install.completed"; platform: "linux" | "darwin" | "win32"; path: string }
+    | { type: "ctl.install.failed"; platform: "linux" | "darwin" | "win32"; error: string }
+    | { type: "ctl.uninstall.started"; platform: "linux" | "darwin" | "win32" }
+    | { type: "ctl.uninstall.completed"; platform: "linux" | "darwin" | "win32"; path: string }
+    | { type: "ctl.uninstall.failed"; platform: "linux" | "darwin" | "win32"; error: string }
