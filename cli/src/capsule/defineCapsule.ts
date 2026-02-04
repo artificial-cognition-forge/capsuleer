@@ -1,4 +1,4 @@
-import { randomUUIDv7 } from "bun"
+import { randomUUIDv7, spawn } from "bun"
 import { join } from "path"
 import tmux from "../capsuled/tmux"
 import { storage } from "../storage/storage"
@@ -63,7 +63,7 @@ type CapsuleState = {
  */
 export async function Capsule(blueprint: CapsuleBlueprint) {
     const state: CapsuleState = {
-        sessionName: `capsule-default`,
+        sessionName: blueprint.name,
         started: false,
     }
 
@@ -76,16 +76,18 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
         async start() {
             if (state.started) return
 
-            // Resolve locked tmux config path dynamically
-            const lockedConfigPath = join(import.meta.dir, "../scripts/tmux/locked.conf")
-            console.log("[Capsule.start] Config path:", lockedConfigPath)
+            // Clean up existing session if it exists
+            try {
+                await tmux.session.kill(state.sessionName)
+            } catch {
+                // Session doesn't exist yet, that's fine
+            }
 
             // Create session with interactive shell and locked tmux config
-            await tmux.session.create(state.sessionName, {
-                windowName: "capsule-default",
-                configFile: lockedConfigPath,
-            })
+            await tmux.session.create(state.sessionName, { windowName: 'main' })
 
+            await tmux.window.create(state.sessionName, `${blueprint.name}`, { index: 1 })
+            await tmux.window.create(state.sessionName, `${blueprint.name}/repl`, { index: 2 })
             state.started = true
         },
 
@@ -96,38 +98,6 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
             if (!state.started) return
             await tmux.session.kill(state.sessionName)
             state.started = false
-        },
-
-        /**
-         * ATTACH MODEL (IMPORTANT)
-         *
-         * This does NOT proxy IO.
-         * It returns a command that the SSH layer executes.
-         */
-        attachCommand(window: string = "shell"): string {
-            const target = `${state.sessionName}:${window}`
-
-            // -t forces PTY
-            // exec replaces SSH shell cleanly
-            return `exec tmux attach -t ${target}`
-        },
-
-        /**
-         * Non-interactive execution (automation only)
-         */
-        async exec(window: string, command: string) {
-            const target = `${state.sessionName}:${window}`
-            await tmux.pane.sendKeys(target, command, true)
-        },
-
-        /**
-         * Snapshot output (debug / observability only)
-         */
-        async snapshot(window: string = "shell") {
-            return tmux.pane.capture(
-                `${state.sessionName}:${window}`,
-                { ansi: true }
-            )
         },
     }
 }

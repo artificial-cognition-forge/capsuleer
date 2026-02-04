@@ -37,6 +37,11 @@ export async function main() {
             process.exit(1)
         }
 
+        if (command === "ls") {
+            await cli.daemon.capsules.list()
+            return
+        }
+
         if (command === "restart") {
             const shouldTrace = args.includes("--trace")
             await cli.daemon.restart({ trace: shouldTrace })
@@ -71,37 +76,15 @@ export async function main() {
             return
         }
 
-        // Auth commands
-        if (command === "auth") {
-            if (subcommand === "setup") {
-                await cli.auth.setup()
+        if (command === "attach") {
+            console.log(args)
+            if (!args[1]) {
+                console.log("attach requires a connection string")
                 return
             }
-            if (subcommand === "add") {
-                const keyPath = args[2]
-                const keyName = args[3]
-                if (!keyPath) {
-                    console.error("auth add requires a key path or key content")
-                    process.exit(1)
-                }
-                await cli.auth.add(keyPath, keyName)
-                return
-            }
-            if (subcommand === "list") {
-                await cli.auth.list()
-                return
-            }
-            if (subcommand === "remove") {
-                const fingerprint = args[2]
-                if (!fingerprint) {
-                    console.error("auth remove requires a fingerprint")
-                    process.exit(1)
-                }
-                await cli.auth.remove(fingerprint)
-                return
-            }
-            console.error("auth requires a subcommand: setup, add, list, remove")
-            process.exit(1)
+
+            await cli.daemon.capsules.attach(args[1])
+            return
         }
 
         // Nested commands: capsule, ssh, log

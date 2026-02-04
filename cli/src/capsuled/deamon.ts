@@ -7,6 +7,7 @@ import { randomUUIDv7, spawn } from "bun"
 import { homedir } from "os"
 import { join } from "path"
 import { checkHealth, type CapsuleerDeamonStatus } from "../commands/health"
+import { parseCapsuleUrl } from "./utils/parseCapsuleUrl"
 
 type CapsuleerRuntimeCtx = {
     daemonInstanceId: string
@@ -19,7 +20,7 @@ type CapsuleerRuntimeCtx = {
 export const daemon = {
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
-
+        process.title = "capsuleerd"
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
@@ -65,6 +66,7 @@ export const daemon = {
 
     /** Start daemon in background and return immediately */
     async up() {
+        process.title = "capsuleerd"
         const logsDir = join(homedir(), ".capsuleer", "logs")
         const logFile = join(logsDir, "daemon.log")
         const scriptsDir = join(import.meta.dirname, "../scripts")
@@ -160,10 +162,8 @@ export const daemon = {
          */
         async attach(connString: string) {
             const manager = await CapsuleManager()
-
-            return await manager.attach(connString, {
-                interface: "shell",
-            })
+            const connection = parseCapsuleUrl(connString)
+            return await manager.attach(connection)
         },
     },
 
