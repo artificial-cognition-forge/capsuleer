@@ -22,7 +22,11 @@ export async function main() {
                 return
             }
             if (subcommand === "restart") {
-                await cli.daemon.restart()
+                const shouldTrace = args.includes("--trace")
+                await cli.daemon.restart({ trace: shouldTrace })
+                if (shouldTrace) {
+                    await cli.tail.run()
+                }
                 return
             }
             if (subcommand === "install") {
@@ -31,6 +35,15 @@ export async function main() {
             }
             console.error("daemon requires a subcommand: start, stop, restart, install")
             process.exit(1)
+        }
+
+        if (command === "restart") {
+            const shouldTrace = args.includes("--trace")
+            await cli.daemon.restart({ trace: shouldTrace })
+            if (shouldTrace) {
+                await cli.tail.run()
+            }
+            return
         }
 
         if (command === "health") {
@@ -104,13 +117,15 @@ export async function main() {
                     console.error("capsule attach requires a connection string")
                     console.error("Format: capsuleer capsule attach [user@]host:port/capsule-name")
                     console.error("Examples:")
-                    console.error("  capsuleer capsule attach localhost:2424/default")
-                    console.error("  capsuleer capsule attach user@127.0.0.1:2424/myapp")
+                    console.error("  capsuleer capsule attach localhost:2423/default")
+                    console.error("  capsuleer capsule attach user@127.0.0.1:2423/myapp")
                     process.exit(1)
                 }
                 const keyFlagIndex = args.findIndex(arg => arg.startsWith("--key="))
                 const key = keyFlagIndex !== -1 ? args[keyFlagIndex].slice(6) : undefined
-                await cli.capsule.attach(connString, { key })
+                const modeFlagIndex = args.findIndex(arg => arg.startsWith("--mode="))
+                const mode = modeFlagIndex !== -1 ? args[modeFlagIndex].slice(7) as "shell" | "bun" : undefined
+                await cli.capsule.attach(connString, { key, mode })
                 return
             }
         }

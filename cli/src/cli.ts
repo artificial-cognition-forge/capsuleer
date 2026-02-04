@@ -1,9 +1,6 @@
 import { daemon } from "./capsuled/deamon"
-import { auth } from "./ingress/auth"
-import { help } from "./help"
+import { help } from "./commands/help"
 import { tail } from "./commands/tail"
-import { attachCommand } from "./commands/attach"
-import { CapsuleManager } from "./capsuled/capsule-manager"
 
 export const cli = {
     daemon: daemon,
@@ -24,29 +21,12 @@ export const cli = {
     health: daemon.health,
 
     /** Manage local capsules. */
-    capsule: {
-        /** List all local capsules. */
-        async list() {
-            const manager = await CapsuleManager()
-            const capsules = await manager.list()
-            if (capsules.length === 0) {
-                console.log("No capsules running")
-                return
-            }
-            console.log(`Capsules (${capsules.length}):`)
-            for (const capsule of capsules) {
-                console.log(`  - ${capsule.blueprint.name}`)
-            }
-        },
+    capsule: daemon.capsules,
 
-        /** Attach to a capsule via SSH. */
-        async attach(connString: string, options?: { key?: string }) {
-            await attachCommand(connString, options)
-        },
-    },
+    ls: daemon.capsules.list,
 
-    /** Authenticate with remote capsules. */
-    auth: auth,
+    // /** Authenticate with remote capsules. */
+    // auth: auth,
 
     /** Tail the capsuleer daemon log. */
     tail: tail,

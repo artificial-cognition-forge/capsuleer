@@ -42,6 +42,7 @@
     "type-safe"
   ],
   "dependencies": {
+    "node-pty": "^1.1.0",
     "ssh2": "^1.17.0"
   }
 }

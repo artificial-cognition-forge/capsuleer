@@ -1,16 +1,20 @@
 import { Client } from "ssh2"
 import { readFileSync, existsSync } from "fs"
 import { join } from "path"
+import { cli } from "cli/src/cli"
+import { attachCommand } from "cli/src/commands/attach"
 
 /**
  * SSH client for connecting to capsule tmux sessions
  */
-
 type ConnectOptions = {
+    capsule: string
+    connectionString: string
     host: string
     port: number
     username: string
     privateKeyPath?: string
+    mode?: "shell" | "bun"
 }
 
 const DEFAULT_PRIVATE_KEYS = [
@@ -47,50 +51,60 @@ function autoDetectPrivateKeys(): string[] {
  * Connect to a remote SSH server and attach to a tmux session
  */
 export async function connectToSSH(
-    sessionName: string,
-    options: ConnectOptions
+    options: ConnectOptions,
 ): Promise<void> {
     return new Promise((resolve, reject) => {
         const client = new Client()
+        const capsuleName = options.capsule
 
-        client.on("ready", () => {
-            console.log(`[SSH Client] Successfully authenticated!`)
+        const command = "tmux a -t capsule-default"
 
-            // Request a shell with PTY (pseudo-terminal)
+        client.on("ready", async () => {
+
+            const conn = `${options.host}:${options.port}/${options.capsule}`
+
             client.shell(
                 {
-                    term: "xterm-256color"
+                    term: process.env.TERM || "xterm-256color",
+                    cols: process.stdout.columns || 80,
+                    rows: process.stdout.rows || 24,
                 },
-                (err: Error | undefined, stream: any) => {
-                    if (err) {
-                        reject(err)
-                        return
+                (err, stream) => {
+                    if (err) return reject(err)
+
+                    if (process.stdin.isTTY) {
+                        process.stdin.setRawMode(true)
+                        process.stdin.resume()
                     }
 
-                    // Set up bidirectional piping FIRST for full interactivity
-                    stream.pipe(process.stdout)
-                    stream.stderr.pipe(process.stderr)
-                    process.stdin.pipe(stream)
-
-                    // Send tmux attach command to connect to the capsule's tmux session
-                    stream.write(`exec tmux attach-session -t ${sessionName}\n`)
-
-                    stream.on("close", () => {
-                        client.end()
-                        resolve()
+                    process.stdin.on("data", (data) => {
+                        stream.write(data)
                     })
 
-                    stream.on("error", (err: any) => {
+                    // process.stdin.on("data", d => console.log("stdin:", d))
+
+                    stream.on("data", (data) => {
+                        process.stdout.write(data)
+                    })
+
+                    process.on("SIGINT", () => {
+                        stream.write("\x03")
+                    })
+
+                    stream.on("close", () => {
+                        if (process.stdin.isTTY) {
+                            process.stdin.setRawMode(false)
+                        }
                         client.end()
-                        reject(err)
+                        resolve()
                     })
                 }
             )
         })
 
-        client.on("error", (err) => {
-            console.error(`[SSH Client] Connection error:`, err.message)
-            reject(err)
+        client.on("error", () => {
+            console.log("[SSH Client] Connection error")
+            reject()
         })
 
         // Build connection config
@@ -117,7 +131,7 @@ export async function connectToSSH(
             for (const keyPath of keyPaths) {
                 try {
                     privateKeys.push(readFileSync(keyPath))
-                    console.log(`[SSH Client] Loaded private key: ${keyPath}`)
+                    // console.log(`[SSH Client] Loaded private key: ${keyPath}`)
                 } catch (error) {
                     console.error(`Failed to read private key from ${keyPath}`)
                 }
@@ -125,9 +139,8 @@ export async function connectToSSH(
             if (privateKeys.length > 0) {
                 config.privateKey = privateKeys[0]
                 if (privateKeys.length > 1) {
-                    console.log(`[SSH Client] Using ${privateKeys.length} private key(s), trying first one`)
+                    // console.log(`[SSH Client] Using ${privateKeys.length} private key(s), trying first one`)
                 }
-                console.log(`[SSH Client] Using private key for authentication`)
             }
         } else if (!options.privateKeyPath) {
             reject(
@@ -138,13 +151,6 @@ export async function connectToSSH(
             return
         }
 
-        console.log(`[SSH Client] Connecting to ${options.host}:${options.port} as ${options.username}`)
-        console.log(`[SSH Client] Config:`, JSON.stringify({
-            host: config.host,
-            port: config.port,
-            username: config.username,
-            privateKey: config.privateKey ? 'present' : 'none',
-        }, null, 2))
         client.connect(config)
     })
 }
@@ -153,21 +159,18 @@ export async function connectToSSH(
  * Connect to a local capsule tmux session via SSH
  */
 export async function connectToCapsule(
-    capsuleId: string,
-    options: { port?: number; username?: string; privateKeyPath?: string } = {}
+    options: { port: number; username: string; privateKeyPath: string, capsule: string, connectionString: string }
 ): Promise<void> {
     const port = options.port || 2423
     const username = options.username || process.env.USER || "root"
+    const capsuleName = options.capsule || "default"
 
-    return connectToSSH(`capsule-${capsuleId}`, {
-        host: "127.0.0.1",
-        port,
-        username,
+    return connectToSSH({
         privateKeyPath: options.privateKeyPath,
+        connectionString: "localhost:2423/default",
+        capsule: capsuleName,
+        host: "127.0.0.1",
+        username,
+        port,
     })
-}
-
-
-const capsuleerClient = {
-
 }

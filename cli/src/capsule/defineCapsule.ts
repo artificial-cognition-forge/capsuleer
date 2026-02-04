@@ -1,4 +1,5 @@
 import { randomUUIDv7 } from "bun"
+import { join } from "path"
 import tmux from "../capsuled/tmux"
 import { storage } from "../storage/storage"
 import { sandbox } from "./sandbox"
@@ -49,16 +50,9 @@ export function defineCapsule(input: DefineCapsuleInput): CapsuleBlueprint {
     }
 }
 
-type CapsuleInstanceState = {
-    capsuleId: string
-    name: string
-
-    tmux: {
-        sessionId: string
-    },
-
-    env: Record<string, string>,
-    scope: any,
+type CapsuleState = {
+    sessionName: string
+    started: boolean
 }
 
 /**
@@ -68,52 +62,74 @@ type CapsuleInstanceState = {
  * - bun process
  */
 export async function Capsule(blueprint: CapsuleBlueprint) {
-    const state: CapsuleInstanceState = {
-        name: blueprint.name,
-        capsuleId: randomUUIDv7(),
-
-        tmux: {
-            sessionId: randomUUIDv7(),
-        },
-
-        env: blueprint.env,
-        scope: blueprint.scope,
+    const state: CapsuleState = {
+        sessionName: `capsule-default`,
+        started: false,
     }
 
     return {
-        blueprint: blueprint,
-        env: state.env,
+        blueprint,
 
+        /**
+         * Start capsule tmux session
+         */
         async start() {
-            // Create tmux session with name: capsule-{name}
-            const sessionName = `capsule-${state.name}`
-            await tmux.session.create(sessionName, {
-                windowName: "shell",
+            if (state.started) return
+
+            // Resolve locked tmux config path dynamically
+            const lockedConfigPath = join(import.meta.dir, "../scripts/tmux/locked.conf")
+            console.log("[Capsule.start] Config path:", lockedConfigPath)
+
+            // Create session with interactive shell and locked tmux config
+            await tmux.session.create(state.sessionName, {
+                windowName: "capsule-default",
+                configFile: lockedConfigPath,
             })
+
+            state.started = true
         },
 
+        /**
+         * Stop capsule
+         */
         async stop() {
-            await tmux.session.kill(state.tmux.sessionId)
+            if (!state.started) return
+            await tmux.session.kill(state.sessionName)
+            state.started = false
         },
 
-        async attach() {
-            // TODO: Implement attach
-            // maybe we just need to return the attach details for the manager.
+        /**
+         * ATTACH MODEL (IMPORTANT)
+         *
+         * This does NOT proxy IO.
+         * It returns a command that the SSH layer executes.
+         */
+        attachCommand(window: string = "shell"): string {
+            const target = `${state.sessionName}:${window}`
+
+            // -t forces PTY
+            // exec replaces SSH shell cleanly
+            return `exec tmux attach -t ${target}`
         },
 
-        ts: {
-            /** Execute a ts command */
-            async exec() { },
+        /**
+         * Non-interactive execution (automation only)
+         */
+        async exec(window: string, command: string) {
+            const target = `${state.sessionName}:${window}`
+            await tmux.pane.sendKeys(target, command, true)
+        },
+
+        /**
+         * Snapshot output (debug / observability only)
+         */
+        async snapshot(window: string = "shell") {
+            return tmux.pane.capture(
+                `${state.sessionName}:${window}`,
+                { ansi: true }
+            )
         },
     }
 }
 
-type CapsuleFolder = {
-    "capsule.ts": CapsuleBlueprint
-}
-
 export type CapsuleInstance = Awaited<ReturnType<typeof Capsule>>
-
-type CapsuleAttachOptions = {
-    mode?: CapsuleClientMode
-}

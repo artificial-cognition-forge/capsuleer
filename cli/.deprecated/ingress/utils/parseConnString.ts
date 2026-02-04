@@ -3,10 +3,10 @@
  * Format: [user@]host:port/capsule-name
  *
  * Examples:
- *   - localhost:2424/default
- *   - user@localhost:2424/default
- *   - 127.0.0.1:2424/capsule1
- *   - root@192.168.1.1:2424/myapp
+ *   - localhost:2423/default
+ *   - user@localhost:2423/default
+ *   - 127.0.0.1:2423/capsule1
+ *   - root@192.168.1.1:2423/myapp
  */
 
 export type ParsedConnString = {
@@ -25,7 +25,7 @@ export function parseConnString(connString: string): ParsedConnString {
         throw new Error(
             `Invalid connection string: missing capsule name\n` +
             `Format: [user@]host:port/capsule-name\n` +
-            `Example: localhost:2424/default`
+            `Example: localhost:2423/default`
         )
     }
 

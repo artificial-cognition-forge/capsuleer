@@ -1,5 +1,6 @@
 import { spawn, type Subprocess } from "bun";
 import { getTrace } from "./traceContext";
+import config from "cli/config";
 
 export interface TmuxError extends Error {
     code: number;
@@ -143,16 +144,29 @@ export const tmux = {
          */
         async create(
             name: string,
-            options: { windowName?: string; cwd?: string } = {}
+            options: { windowName?: string; cwd?: string, detached?: boolean, configFile?: string } = {}
         ): Promise<void> {
             const args = ["new-session", "-d", "-s", name];
             if (options.windowName) {
                 args.push("-n", options.windowName);
             }
+            if (options.detached) {
+                args.push("-d");
+            }
             if (options.cwd) {
                 args.push("-c", options.cwd);
             }
+            console.log("[tmux.session.create] Command:", ["tmux", ...args].join(" "));
             await tmux.exec(args);
+
+            // Apply config file to session if provided
+            if (options.configFile) {
+                console.log("[tmux.session.create] Applying config:", options.configFile);
+                // Apply locked config settings directly to the session
+                await tmux.exec(["set-option", "-t", name, "status", "off"]);
+                await tmux.exec(["set-option", "-t", name, "prefix", "None"]);
+            }
+
             getTrace().push({
                 type: "tmux.session.created",
                 serverId: "default",
@@ -209,8 +223,24 @@ export const tmux = {
         /**
          * Attach to a session (spawns interactive process)
          */
-        attach(name: string): void {
-            tmux.spawn(["attach-session", "-t", name]);
+        async attach(name: string, options: { configFile?: string } = {}): Promise<number> {
+            const cmd = ["tmux"];
+
+            // If a config file is provided, use it
+            if (options.configFile) {
+                console.log(options.configFile)
+                cmd.push("-f", options.configFile);
+            }
+
+            cmd.push("attach", "-t", name);
+
+            const proc = spawn({
+                cmd,
+                stdio: ["inherit", "inherit", "inherit"],
+            })
+
+            // await tmuxProc.exited;
+            return await proc.exited
         },
     },
 
@@ -309,6 +339,28 @@ export const tmux = {
 
     pane: {
         /**
+         * Get the process ID running in a pane
+         */
+        async getPID(target: string): Promise<number> {
+            const output = await tmux.exec([
+                "list-panes",
+                "-t",
+                target,
+                "-F",
+                "#{pane_pid}",
+            ])
+            const pidStr = output.trim()
+            if (!pidStr) {
+                throw new Error(`Cannot determine PID for pane ${target}`)
+            }
+            const pid = parseInt(pidStr, 10)
+            if (isNaN(pid)) {
+                throw new Error(`Invalid PID for pane ${target}: ${pidStr}`)
+            }
+            return pid
+        },
+
+        /**
          * List panes in a window
          */
         async list(session: string, window: string | number): Promise<PaneInfo[]> {
@@ -342,9 +394,15 @@ export const tmux = {
         async sendKeys(
             target: string,
             keys: string,
-            enter: boolean = true
+            enter: boolean = true,
+            literal: boolean = false
         ): Promise<void> {
-            const args = ["send-keys", "-t", target, keys];
+            const args = ["send-keys", "-t", target];
+            // -l flag: interpret as literal UTF-8 keys, not special sequences (like C-c)
+            if (literal) {
+                args.push("-l");
+            }
+            args.push(keys);
             if (enter) {
                 args.push("Enter");
             }

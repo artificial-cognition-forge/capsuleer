@@ -9,42 +9,22 @@
  */
 
 import { parseConnString } from "../ingress/utils/parseConnString"
-import { connectToSSH } from "../ingress/ssh/client"
 import { CapsuleManager } from "../capsuled/capsule-manager"
 
-export async function attachCommand(connString: string, options: { key?: string } = {}) {
-    try {
-        // Parse connection string
-        const parsed = parseConnString(connString)
-        console.log(`Connecting to ${parsed.user}@${parsed.host}:${parsed.port}/${parsed.capsuleName}...`)
+export async function attachCommand(connString: string, options: { key?: string; mode?: "shell" | "bun" } = {}) {
+    // Parse connection string
+    const parsed = parseConnString(connString)
+    console.log(`Connecting to ${parsed.user}@${parsed.host}:${parsed.port}/${parsed.capsuleName}...`)
 
-        // If connecting to localhost, verify capsule exists locally
-        if (parsed.host === "127.0.0.1" || parsed.host === "localhost") {
-            const manager = await CapsuleManager()
-            const capsule = await manager.get(parsed.capsuleName)
-            if (!capsule) {
-                throw new Error(`Capsule '${parsed.capsuleName}' not found on local daemon`)
-            }
-            console.log(`✓ Found capsule: ${parsed.capsuleName}`)
+    // If connecting to localhost, verify capsule exists locally
+    if (parsed.host === "127.0.0.1" || parsed.host === "localhost") {
+        const manager = await CapsuleManager()
+        const capsule = await manager.get(parsed.capsuleName)
+        if (!capsule) {
+            throw new Error(`Capsule '${parsed.capsuleName}' not found on local daemon`)
         }
-
-        // Connect via SSH
-        // Session name format: capsule-<name>
-        // The SSH server expects this format and routes to tmux
-        const sessionName = `capsule-${parsed.capsuleName}`
-
-        await connectToSSH(sessionName, {
-            host: parsed.host,
-            port: parsed.port,
-            username: parsed.user,
-            privateKeyPath: options.key,
-        })
-    } catch (error) {
-        if (error instanceof Error) {
-            console.error(`✗ Attach failed: ${error.message}`)
-        } else {
-            console.error(`✗ Attach failed:`, error)
-        }
-        process.exit(1)
+        console.log(`✓ Found capsule: ${parsed.capsuleName}`)
     }
+
+    return ""
 }

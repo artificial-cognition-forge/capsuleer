@@ -4,7 +4,6 @@ import { CapsuleManager, type CapsuleManagerInstance } from "./capsule-manager"
 import { trace, type CapsuleerTrace } from "./trace"
 import { setTraceContext, clearTraceContext, getTrace } from "./traceContext"
 import { randomUUIDv7, spawn } from "bun"
-import { ssh } from "../ingress/ssh/ssh"
 import { homedir } from "os"
 import { join } from "path"
 
@@ -32,19 +31,16 @@ const CAPSULE_CONNECT_STRING_FORMAT = "user@host:port/capsule-name"
 export const daemon = {
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
+
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
-        const server = ssh()
-
         // Set global trace context for all modules
+
         setTraceContext(log, daemonInstanceId)
 
-        const ctx: CapsuleerRuntimeCtx = {
-            daemonInstanceId,
-            capsuleManager: manager,
-            trace: log,
-        }
+        // Save daemon PID for later cleanup
+        await storage.pidManager.savePID(process.pid)
 
         // emit startup event
         log.push({
@@ -61,9 +57,6 @@ export const daemon = {
         // start all capsules
         await manager.start()
 
-        // start ssh server and wait for it to be ready
-        await server.start()
-
         // The SSH server continues handling requests in the background
         // Block forever until signal (Ctrl+C or systemd stop)
         await new Promise<void>((resolve) => {
@@ -76,17 +69,11 @@ export const daemon = {
             process.on('SIGTERM', handleShutdown)
             process.on('SIGINT', handleShutdown)
         })
+        return
     },
 
     /** Start daemon in background and return immediately */
     async up() {
-        // Check if SSH is already running on port 2424
-        const sshHealth = await ssh().health()
-        if (sshHealth.status === "running") {
-            console.log("Daemon is already running on port " + sshHealth.port)
-            return
-        }
-
         const logsDir = join(homedir(), ".capsuleer", "logs")
         const logFile = join(logsDir, "daemon.log")
         const scriptsDir = join(import.meta.dirname, "../scripts")
@@ -99,63 +86,68 @@ export const daemon = {
             stdio: ["ignore", "ignore", "ignore"],
         })
 
-        // Unref so this process doesn't wait
-        proc.unref()
+        // proc.unref()
+
+        // Wait for the script to start the daemon and exit
+        // const exitCode = await proc.exited
+
+        // if (exitCode !== 0) {
+        //     const stderr = await new Response(proc.stderr).text()
+        //     throw new Error(`Failed to start daemon: ${stderr}`)
+        // }
+
+        // Give the daemon a moment to fully initialize
+        // await new Promise(resolve => setTimeout(resolve, 500))
 
         console.log("Daemon started in background (logs at " + logFile + ")")
     },
 
-    /** Stop daemon in background and return immediately */
+    /** Stop daemon and return immediately */
     async down() {
-        // Check if SSH is running
-        const sshHealth = await ssh().health()
-        if (sshHealth.status !== "running") {
-            console.log("Daemon is not running")
-            return
-        }
-
-        const scriptsDir = join(import.meta.dirname, "../scripts")
-        const stopScript = join(scriptsDir, "daemon/stop.sh")
-
-        // Spawn the stop script with port argument
-        const proc = spawn({
-            cmd: ["bash", stopScript, "2424"],
-            detached: true,
-        })
-
-        proc.unref()
-
-        console.log("Stopping daemon...")
-
-        // Give it a moment to stop
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await storage.pidManager.killDaemon()
+        console.log("Daemon stopped")
     },
 
     /** Stop the Capsuleer Deamon */
     async stop() {
         const log = getTrace()
 
-        log.push({
-            type: "daemon.stopped",
-            reason: "signal",
-        })
+        if (log) {
+            log.push({
+                type: "daemon.stopped",
+                reason: "signal",
+            })
+        }
 
-        await ssh().stop()
-        await tmux.server.stop()
+
+        // Kill tmux server with force to ensure all sessions are terminated
+        try {
+            await tmux.exec(["kill-server"])
+        } catch (err) {
+            // Silently ignore if server doesn't exist - this is normal
+        }
+
         clearTraceContext()
     },
 
     /** Restart the Capsuleer Deamon */
     async restart() {
+        const log = trace()
+        const daemonInstanceId = randomUUIDv7()
+        setTraceContext(log, daemonInstanceId)
+
         await daemon.stop()
-        await daemon.runtime()
+        await daemon.up()
+
+        clearTraceContext()
     },
 
     /** Get the current status of the Capsuleer Deamon */
     async health(): Promise<CapsuleerDeamonStatus> {
         try {
             // Get SSH server health
-            const sshHealth = await ssh().health()
+            // we now need another way to check the health of the server
+            const sshHealth = await ssh().health() // we no longer use our own ssh server
 
             // Tmux server is running if we can list sessions
             const sessions = await tmux.session.list()
@@ -192,15 +184,43 @@ export const daemon = {
 
     /** Daemon capsules */
     capsules: {
-        // hook up with the manager
+        /** List all local capsules. */
         async list() {
             const manager = await CapsuleManager()
-            return await manager.list()
+            const capsules = await manager.list()
+            if (capsules.length === 0) {
+                console.log("No capsules running")
+                return
+            }
+            console.log(`Capsules (${capsules.length}):`)
+            for (const capsule of capsules) {
+                console.log(`  - ${capsule.blueprint.name}`)
+            }
         },
 
-        /** Attach to a capsule via SSH. */
-        async attach(url: string, options: CapsuleAttachOptions) {
-            // 
+        /** 
+         * Capsuleer Attach
+         * 
+         * Attach to a running capsule process.
+         * 
+         * Usage:
+         * 
+         * **Local**
+         * ```ts
+         *"capsuleer attach <capsule-name>"
+         * ```
+         * 
+         * **Remote**
+         * ```ts
+         *"capsuleer attach <host>:<port>/<capsule-name>"
+         * ```
+         */
+        async attach(connString: string) {
+            const manager = await CapsuleManager()
+
+            return await manager.attach(connString, {
+                interface: "shell",
+            })
         },
     },
 

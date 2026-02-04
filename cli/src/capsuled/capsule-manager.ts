@@ -1,5 +1,8 @@
 import { Capsule, type CapsuleBlueprint, type CapsuleInstance } from "../capsule/defineCapsule"
 
+import { spawn } from "bun"
+import tmux from "./tmux"
+
 // Stub for now, later this will stored on disk
 export const capsuleRegistry: Record<string, CapsuleBlueprint> = {
     default: {
@@ -22,13 +25,12 @@ export type CapsuleManagerInstance = {
     start(): Promise<void>
     list(): Promise<CapsuleInstance[]>
     get(id: string): Promise<CapsuleInstance | null>
-    attach(name: string, options: CapsuleAttachOptions): Promise<void>
+    attach(name: string, options?: CapsuleAttachOptions): Promise<void>
 }
 
 type CapsuleAttachOptions = {
     interface?: "shell" | "typescript"
     pty?: {
-        enabled?: boolean
         term?: string
         cols?: number
         rows?: number
@@ -42,6 +44,7 @@ type CapsuleAttachOptions = {
  * Ensures only one CapsuleManager exists for the daemon lifetime.
  */
 export async function CapsuleManager(): Promise<CapsuleManagerInstance> {
+    return
     // If already instantiated, return immediately
     if (instance !== null) {
         return instance
@@ -90,8 +93,24 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
             return capsules.get(id) || null
         },
 
-        async attach(name: string, options: CapsuleAttachOptions) {
-            // Implementation
+        /** 
+         * Capsule Attach
+         * 
+         * Attach to a running capsule process.
+         * 
+         * @returns
+         * A promise that resolves when the process ends.
+         * 
+         */
+        async attach(name: string, options?: CapsuleAttachOptions) {
+            const capsule = capsules.get(name) as CapsuleInstance
+            if (!capsule) {
+                throw new Error(`Capsule not found: ${name}`)
+            }
+
+            // Exits automatically when the process ends
+            // Config is applied at session creation time in defineCapsule.ts
+            await tmux.session.attach("capsule-default")
         },
     }
 }
