@@ -6,18 +6,7 @@ import { setTraceContext, clearTraceContext, getTrace } from "./traceContext"
 import { randomUUIDv7, spawn } from "bun"
 import { homedir } from "os"
 import { join } from "path"
-
-type SSHStatus = {
-    status: string
-    port: number
-    clients: number
-}
-
-type CapsuleerDeamonStatus = {
-    running: boolean
-    healthy: boolean
-    ssh: SSHStatus
-}
+import { checkHealth, type CapsuleerDeamonStatus } from "../commands/health"
 
 type CapsuleerRuntimeCtx = {
     daemonInstanceId: string
@@ -25,7 +14,6 @@ type CapsuleerRuntimeCtx = {
     trace: CapsuleerTrace
 }
 
-const CAPSULE_CONNECT_STRING_FORMAT = "user@host:port/capsule-name"
 
 /** Capsuleer Daemon */
 export const daemon = {
@@ -57,19 +45,22 @@ export const daemon = {
         // start all capsules
         await manager.start()
 
+        console.log("Manager started")
+
         // The SSH server continues handling requests in the background
         // Block forever until signal (Ctrl+C or systemd stop)
-        await new Promise<void>((resolve) => {
-            const handleShutdown = async () => {
-                console.log("\nShutting down gracefully...")
-                await daemon.stop()
-                resolve()
-            }
+        const handleShutdown = async () => {
+            console.log("\nShutting down gracefully...")
+            await daemon.stop()
+            process.exit(0)
+        }
 
-            process.on('SIGTERM', handleShutdown)
-            process.on('SIGINT', handleShutdown)
-        })
-        return
+        process.on('SIGTERM', handleShutdown)
+        process.on('SIGINT', handleShutdown)
+
+        // Block forever using Bun's sleep with a very large timeout
+        // This avoids the Bun event loop bug with empty Promise executors
+        await Bun.sleep(Number.MAX_SAFE_INTEGER)
     },
 
     /** Start daemon in background and return immediately */
@@ -79,25 +70,12 @@ export const daemon = {
         const scriptsDir = join(import.meta.dirname, "../scripts")
         const startScript = join(scriptsDir, "daemon/start.sh")
 
-        // Spawn the start script with log file argument
-        const proc = spawn({
+        // Spawn the daemon in background
+        spawn({
             cmd: ["bash", startScript, logFile],
             detached: true,
             stdio: ["ignore", "ignore", "ignore"],
         })
-
-        // proc.unref()
-
-        // Wait for the script to start the daemon and exit
-        // const exitCode = await proc.exited
-
-        // if (exitCode !== 0) {
-        //     const stderr = await new Response(proc.stderr).text()
-        //     throw new Error(`Failed to start daemon: ${stderr}`)
-        // }
-
-        // Give the daemon a moment to fully initialize
-        // await new Promise(resolve => setTimeout(resolve, 500))
 
         console.log("Daemon started in background (logs at " + logFile + ")")
     },
@@ -144,42 +122,7 @@ export const daemon = {
 
     /** Get the current status of the Capsuleer Deamon */
     async health(): Promise<CapsuleerDeamonStatus> {
-        try {
-            // Get SSH server health
-            // we now need another way to check the health of the server
-            const sshHealth = await ssh().health() // we no longer use our own ssh server
-
-            // Tmux server is running if we can list sessions
-            const sessions = await tmux.session.list()
-            const running = sessions.length > 0
-
-            // Only check session if server is running
-            const hasSession = running ? await tmux.session.has("capsuleerd_server") : false
-
-            const res = {
-                running: running && sshHealth.status === "running",
-                healthy: running && hasSession && sshHealth.status === "running",
-                ssh: sshHealth,
-            }
-
-            console.log(res)
-
-            return res
-        } catch (error) {
-            // If we can't reach services, daemon is not running
-            const res = {
-                running: false,
-                healthy: false,
-                ssh: {
-                    status: "unknown",
-                    port: 0,
-                    clients: 0,
-                },
-            }
-
-            console.log(res)
-            return res
-        }
+        return await checkHealth()
     },
 
     /** Daemon capsules */
