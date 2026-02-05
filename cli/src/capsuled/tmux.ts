@@ -156,7 +156,6 @@ export const tmux = {
         ): Promise<void> {
             const args = ["new-session", "-d", "-s", name];
 
-            const config = options.tmux ? tmux.config[options.tmux] : tmux.config.locked
 
             if (options.windowName) {
                 args.push("-n", options.windowName);
@@ -186,7 +185,6 @@ export const tmux = {
                 // ignore if alareyd exists
             }
 
-            await config(name) // apply tmux config
 
             getTrace().push({
                 type: "tmux.session.created",
@@ -272,17 +270,12 @@ export const tmux = {
         async attach(
             session: string,
             window: string | number,
-            options: { tmux?: keyof typeof tmux.config } = {}
         ): Promise<number> {
             const target =
                 typeof window === "number" ? `${session}:${window}` : `${session}:${window}`;
             const cmd = ["tmux"];
 
-            const config = options.tmux ? tmux.config[options.tmux] : tmux.config.locked
-
             cmd.push("attach", "-t", target);
-
-            await config(target) // setup tmux config
 
             const proc = spawn({
                 cmd,
@@ -321,8 +314,8 @@ export const tmux = {
          */
         async create(
             session: string,
-            name?: string,
-            options: { command?: string | string[]; index?: number } = {}
+            name: string,
+            options: { command?: string | string[]; index?: number, tmux?: TmuxConfigType } = {}
         ): Promise<string> {
             const args = ["new-window", "-t", session];
             if (options.index !== undefined) {
@@ -330,6 +323,9 @@ export const tmux = {
                 // Remove the previous -t session entry
                 args.splice(1, 2);
             }
+
+            const config = options.tmux ? tmux.config[options.tmux] : tmux.config.locked
+
             if (name) {
                 args.push("-n", name);
             }
@@ -343,10 +339,12 @@ export const tmux = {
             }
 
             try {
-                return await tmux.exec(args);
+                await tmux.exec(args);
+                // setup tmux config after window is created
+                await config(session, name)
             } catch (error) {
                 console.log("tmux.window.create failed", error)
-                // ignore if alareyd exists
+                // ignore if already exists
             }
 
             return ""
@@ -561,26 +559,18 @@ export const tmux = {
             await tmux.exec(["set-option", "-t", target, "prefix", "None"]);
         },
 
-        /** 
-         * Tmux config for bun REPL. 
-         * 
-         * Prevents killing the bun repl. The user can only detach.
+        /**
+         * Tmux config for bun REPL.
+         *
+         * Hides tmux UI to create a native REPL experience.
+         * The user can only detach (Ctrl+B then D by default).
          */
         async bun(session: string, window: string) {
             const target = `${session}:${window}`
 
-            // Optional: keep status bar on and custom prefix
-            await tmux.exec(["set-option", "-t", target, "status", "on"]);
-            await tmux.exec(["set-option", "-t", target, "prefix", "bun"]);
-
-            // Drop bun REPL into the specific window
-            await tmux.exec([
-                "send-keys",
-                "-t",
-                target,
-                "bun repl",
-                "C-m",
-            ])
+            // Hide status bar for native REPL look
+            await tmux.exec(["set-option", "-t", target, "status", "off"]);
+            await tmux.exec(["set-option", "-t", target, "prefix", "None"]);
         }
 
     }

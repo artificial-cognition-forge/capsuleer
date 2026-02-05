@@ -86,8 +86,15 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
             // Create session with interactive shell and locked tmux config
             await tmux.session.create(state.sessionName, { windowName: 'main' })
 
-            await tmux.window.create(state.sessionName, `${blueprint.name}`, { index: 1 })
-            await tmux.window.create(state.sessionName, `${blueprint.name}/repl`, { index: 2 })
+            await tmux.window.create(state.sessionName, `${blueprint.name}`, {
+                index: 1,
+                tmux: "locked"
+            })
+            await tmux.window.create(state.sessionName, `${blueprint.name}/repl`, {
+                command: [],
+                index: 2,
+                tmux: "bun"
+            })
             state.started = true
         },
 

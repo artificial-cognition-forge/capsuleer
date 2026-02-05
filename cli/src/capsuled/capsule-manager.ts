@@ -47,7 +47,6 @@ export async function CapsuleManager(): Promise<CapsuleManagerInstance> {
         return bootPromise
     }
 
-
     // Start boot process
     bootPromise = createCapsuleManager()
     instance = await bootPromise
@@ -64,7 +63,6 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
     const capsuleConfigs = Object.values(capsuleRegistry)
     const capsules = new Map<string, CapsuleInstance>()
 
-    // Create (but don't start) all capsules
     for (const config of capsuleConfigs) {
         const capsule = await Capsule(config)
         capsules.set(config.name, capsule)
@@ -114,6 +112,5 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
 
             await tmux.window.attach(capsuleName, fullName)
         },
-
     }
 }
