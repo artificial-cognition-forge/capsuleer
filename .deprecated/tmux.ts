@@ -45,8 +45,9 @@ export const tmux = {
      * Execute a tmux command and return the output
      */
     async exec(args: string[]): Promise<string> {
-        const proc = spawn(["tmux", ...args], {
+        const proc = Bun.spawn(["tmux", ...args], {
             stdio: ["ignore", "pipe", "pipe"],
+            env: process.env,
         })
 
         const stdout = await new Response(proc.stdout).text();
@@ -67,8 +68,9 @@ export const tmux = {
      * Spawn a long-running tmux process (new session, attach, etc)
      */
     async spawn(args: string[]): Promise<Subprocess<"inherit", "pipe", "pipe">> {
-        return spawn(["tmux", ...args], {
+        return Bun.spawn(["tmux", ...args], {
             stdio: ["inherit", "pipe", "pipe"],
+            env: process.env,
         })
     },
 
@@ -180,7 +182,7 @@ export const tmux = {
 
             try {
 
-                await tmux.exec(args);
+                const proc = await tmux.exec(args);
             } catch {
                 // ignore if alareyd exists
             }
@@ -253,9 +255,11 @@ export const tmux = {
 
             cmd.push("attach", "-t", name);
 
+            console.log("TMUX ENV", process.env)
             const proc = spawn({
                 cmd,
                 stdio: ["inherit", "inherit", "inherit"],
+                env: process.env,
             })
 
             // await tmuxProc.exited;
@@ -280,6 +284,7 @@ export const tmux = {
             const proc = spawn({
                 cmd,
                 stdio: ["inherit", "inherit", "inherit"],
+                env: process.env,
             })
 
             return await proc.exited
@@ -338,8 +343,10 @@ export const tmux = {
                 }
             }
 
+            console.log("TMUX ENV", process.env)
             try {
-                await tmux.exec(args);
+
+                await tmux.exec(args)
                 // setup tmux config after window is created
                 await config(session, name)
             } catch (error) {

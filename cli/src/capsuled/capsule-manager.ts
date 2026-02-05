@@ -1,9 +1,6 @@
 import { Capsule, type CapsuleBlueprint, type CapsuleInstance } from "../capsule/defineCapsule"
 import { type CapsuleConnectionRequest } from "./utils/parseCapsuleUrl"
 
-import { spawn } from "bun"
-import tmux from "./tmux"
-
 // Stub for now, later this will stored on disk
 export const capsuleRegistry: Record<string, CapsuleBlueprint> = {
     default: {
@@ -105,12 +102,31 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
                 throw new Error(`Capsule not found: ${name}`)
             }
 
+            await capsule.spawn.shell({
+                name: name,
+                endpoint: endpoint,
+                host: "127.0.0.1",
+                port: 22,
+                pty: true,
+            })
+
+            await capsule.spawn.bun({
+                name: name,
+                endpoint: `${endpoint}/repl`,
+                host: "127.0.0.1",
+                port: 22,
+                pty: true,
+            })
+
+            return await capsule.attach(`${endpoint}/repl`)
+
             let fullName = name
             if (endpoint !== "shell") {
                 fullName = `${name}/${endpoint}`
             }
 
-            await tmux.window.attach(capsuleName, fullName)
+            // todo attach to thing
+            // await tmux.window.attach(capsuleName, fullName)
         },
     }
 }

@@ -1,6 +1,5 @@
 import { exec } from "child_process"
 import { promisify } from "util"
-import tmux from "../capsuled/tmux"
 
 const execAsync = promisify(exec)
 
@@ -82,11 +81,11 @@ export async function checkHealth(): Promise<CapsuleerDeamonStatus> {
         const sshListening = sshDaemonRunning ? await isSSHListening() : false
 
         // Tmux server is running if we can list sessions
-        const sessions = await tmux.session.list()
-        const tmuxRunning = sessions.length > 0
+        // const sessions = await tmux.session.list()
+        // const tmuxRunning = sessions.length > 0
 
         // Only check session if tmux is running
-        const hasSession = tmuxRunning ? await tmux.session.has("capsuleerd_server") : false
+        // const hasSession = tmuxRunning ? await tmux.session.has("capsuleerd_server") : false
 
         const res = {
             running: tmuxRunning && sshListening,

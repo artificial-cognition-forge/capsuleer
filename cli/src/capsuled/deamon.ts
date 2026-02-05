@@ -1,5 +1,5 @@
 import { storage } from "../storage/storage"
-import tmux from "./tmux"
+import { writeAuthorizedKeysFile } from "../storage/keys"
 import { CapsuleManager, type CapsuleManagerInstance } from "./capsule-manager"
 import { trace, type CapsuleerTrace } from "./trace"
 import { setTraceContext, clearTraceContext, getTrace } from "./traceContext"
@@ -21,6 +21,7 @@ export const daemon = {
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
         process.title = "capsuleerd"
+        console.log("DAEMON ENV", process.env)
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
@@ -29,7 +30,6 @@ export const daemon = {
         setTraceContext(log, daemonInstanceId)
 
         // Save daemon PID for later cleanup
-        await storage.pidManager.savePID(process.pid)
 
         // emit startup event
         log.push({
@@ -40,13 +40,15 @@ export const daemon = {
         // ensure installed
         await daemon.install()
 
+        // Write capsuleer authorized keys to SSH's authorized_keys file
+        const sshKeysPath = join(homedir(), ".ssh", "authorized_keys")
+        writeAuthorizedKeysFile(sshKeysPath)
+
         // start tmux
-        await tmux.server.start()
+        // await tmux.server.start()
 
         // start all capsules
         await manager.start()
-
-        console.log("Manager started")
 
         // The SSH server continues handling requests in the background
         // Block forever until signal (Ctrl+C or systemd stop)
@@ -72,11 +74,13 @@ export const daemon = {
         const scriptsDir = join(import.meta.dirname, "../scripts")
         const startScript = join(scriptsDir, "daemon/start.sh")
 
+
         // Spawn the daemon in background
         spawn({
             cmd: ["bash", startScript, logFile],
             detached: true,
             stdio: ["ignore", "ignore", "ignore"],
+            env: process.env
         })
 
         console.log("Daemon started in background (logs at " + logFile + ")")
@@ -84,7 +88,6 @@ export const daemon = {
 
     /** Stop daemon and return immediately */
     async down() {
-        await storage.pidManager.killDaemon()
         console.log("Daemon stopped")
     },
 
@@ -102,7 +105,7 @@ export const daemon = {
 
         // Kill tmux server with force to ensure all sessions are terminated
         try {
-            await tmux.exec(["kill-server"])
+            // await tmux.exec(["kill-server"])
         } catch (err) {
             // Silently ignore if server doesn't exist - this is normal
         }
@@ -165,6 +168,21 @@ export const daemon = {
             const connection = parseCapsuleUrl(connString)
             return await manager.attach(connection)
         },
+    },
+
+    /** 
+     * Remote Procedure Call 
+     * 
+     * for machine use of the capsuleer cli
+     */
+    rpc: {
+        /** 
+         * Capsuleer RPC
+         * 
+         * Full control over the capsuleer cli over SSH.
+         */
+        async stdio() {
+        }
     },
 
     /** Write ctl script to disk */

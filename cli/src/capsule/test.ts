@@ -1,0 +1,1 @@
+(globalThis as any).log = console.log;
