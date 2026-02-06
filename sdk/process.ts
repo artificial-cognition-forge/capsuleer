@@ -23,7 +23,7 @@ interface ProcessInternal extends Process {
  */
 export function createProcess(
   id: ProcessId,
-  runtime: 'shell' | 'bun',
+  runtime: 'shell' | 'typescript',
   sessionId: SessionId,
   transport: RPCTransport
 ): ProcessInternal {

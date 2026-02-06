@@ -30,7 +30,7 @@ export type ProcessEvent =
  */
 export interface ProcessStatus {
   id: ProcessId
-  runtime: 'shell' | 'bun'
+  runtime: 'shell' | 'typescript'
   running: boolean
   code?: number
   signal?: string
@@ -45,7 +45,7 @@ export interface Session {
   readonly capsuleName: string
   readonly createdAt: number
 
-  spawn(runtime: 'shell' | 'bun'): Promise<Process>
+  spawn(runtime: 'shell' | 'typescript'): Promise<Process>
   kill(): Promise<void>
   isActive(): boolean
 }
@@ -55,7 +55,7 @@ export interface Session {
  */
 export interface Process {
   readonly id: ProcessId
-  readonly runtime: 'shell' | 'bun'
+  readonly runtime: 'shell' | 'typescript'
   readonly sessionId: SessionId
   readonly startedAt: number
 
@@ -75,7 +75,7 @@ export interface Process {
 /**
  * Client interface - main entry point
  */
-export interface CapsuleClientT {
+export interface CapsuleerClientT {
   connect(capsuleId: string): Promise<Session>
   isConnected(): Promise<boolean>
   disconnect(): Promise<void>

@@ -43,7 +43,6 @@ export const daemon = {
         // The SSH server continues handling requests in the background
         // Block forever until signal (Ctrl+C or systemd stop)
         const handleShutdown = async () => {
-            console.log("\nShutting down gracefully...")
             await daemon.down()
             process.exit(0)
         }

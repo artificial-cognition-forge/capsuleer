@@ -4,7 +4,7 @@
  * Main entry point for SDK usage. Handles SSH connection and session management.
  */
 
-import type { CapsuleClient, ClientOptions, SessionId } from './types'
+import type { CapsuleerClient, CapsuleerClientT, ClientOptions, SessionId } from './types'
 import { createRPCTransport, type RPCTransport } from './transport'
 import { createSession, type SessionInternal } from './session'
 
@@ -33,7 +33,7 @@ const initTrace = () => {
  * @returns Client instance
  *
  * @example
- * const client = CapsuleClient({
+ * const client = CapsuleerClient({
  *   host: '127.0.0.1',
  *   port: 22,
  *   username: 'user'
@@ -46,7 +46,7 @@ const initTrace = () => {
  *   console.log(new TextDecoder().decode(chunk))
  * }
  */
-export function CapsuleClient(options: ClientOptions): CapsuleClient {
+export function CapsuleerClient(options: ClientOptions): CapsuleerClientT {
   const transport = createRPCTransport(options)
   let currentSession: SessionInternal | null = null
 

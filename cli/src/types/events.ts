@@ -61,7 +61,7 @@ type RPCEvent =
     | { type: "rpc.session.terminate"; capsuleId: string; sessionId: string }
 
     // Process management
-    | { type: "rpc.process.spawn"; capsuleId: string; sessionId: string; processId: string; runtime: "shell" | "bun" }
+    | { type: "rpc.process.spawn"; capsuleId: string; sessionId: string; processId: string; runtime: "shell" | "typescript" }
     | { type: "rpc.process.spawn.error"; capsuleId: string; sessionId: string; error: string }
     | { type: "rpc.process.exit"; capsuleId: string; sessionId: string; processId: string; code: number; signal?: string }
     | { type: "rpc.process.error"; capsuleId: string; sessionId: string; processId: string; error: string }

@@ -14,7 +14,7 @@ import type { RPCSessionRegistry } from './rpcSessions'
 /** RPC request message types */
 type RPCRequest =
     | { id: number; method: 'attach-capsule'; params: { capsuleId: string } }
-    | { id: number; method: 'spawn'; params: { runtime: 'shell' | 'bun' } }
+    | { id: number; method: 'spawn'; params: { runtime: 'shell' | 'typescript' } }
     | { id: number; method: 'stdin'; params: { processId: string; data: string } }
     | { id: number; method: 'stdin-end'; params: { processId: string } }
     | { id: number; method: 'kill'; params: { processId: string } }

@@ -4,7 +4,7 @@
  * Usage patterns for the Capsuleer client SDK.
  */
 
-import { CapsuleClient } from './index'
+import { CapsuleerClient } from './index'
 
 /**
  * Example 1: Simple Shell Command
@@ -12,7 +12,7 @@ import { CapsuleClient } from './index'
  * Connect, run a shell command, and collect output.
  */
 async function example1_simpleShellCommand() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -47,7 +47,7 @@ async function example1_simpleShellCommand() {
  * Forward process stdout to console in real-time.
  */
 async function example2_realtimeOutput() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -72,7 +72,7 @@ async function example2_realtimeOutput() {
  * Use unified events iterable to handle all output.
  */
 async function example3_stdoutAndStderr() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -115,7 +115,7 @@ async function example3_stdoutAndStderr() {
  * Spawn a process and detach (let it run in background).
  */
 async function example4_backgroundTask() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -145,7 +145,7 @@ async function example4_backgroundTask() {
  * Run multiple commands in sequence.
  */
 async function example5_multipleProcesses() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -175,7 +175,7 @@ async function example5_multipleProcesses() {
  * Spawn multiple processes and handle them concurrently.
  */
 async function example6_concurrentProcesses() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -210,7 +210,7 @@ async function example6_concurrentProcesses() {
  * Proper error handling patterns.
  */
 async function example7_errorHandling() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -221,6 +221,7 @@ async function example7_errorHandling() {
 
     // Spawn errors (silently caught - error handling works correctly)
     try {
+      // @ts-ignore : invalid runtime intentional test
       const proc = await session.spawn('invalid-runtime')
     } catch (err) {
       // Error is caught and handled gracefully, no output needed
@@ -249,7 +250,7 @@ async function example7_errorHandling() {
  * Run a process with timeout.
  */
 async function example8_timeout() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -280,7 +281,7 @@ async function example8_timeout() {
  * Check process status periodically.
  */
 async function example9_statusPolling() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })
@@ -318,7 +319,7 @@ async function example9_statusPolling() {
  * Use bun runtime instead of shell.
  */
 async function example10_bunRuntime() {
-  const client = CapsuleClient({
+  const client = CapsuleerClient({
     host: '127.0.0.1',
     port: 22,
   })

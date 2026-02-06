@@ -287,7 +287,7 @@ Client → connect(capsule) → Session → spawn(runtime) → Process → event
 
 **Key Files**:
 - `sdk/index.ts` - Main export and documentation
-- `sdk/client.ts` - CapsuleClient entry point
+- `sdk/client.ts` - CapsuleerClient entry point
 - `sdk/transport.ts` - RPC transport layer (SSH, JSON-L, request correlation)
 - `sdk/session.ts` - Session wrapper (process management, event routing)
 - `sdk/process.ts` - Process wrapper (async streams, lifecycle)
@@ -299,7 +299,7 @@ Client → connect(capsule) → Session → spawn(runtime) → Process → event
 **Architecture**: The SDK is organized in layers:
 
 ```
-CapsuleClient (entry point)
+CapsuleerClient (entry point)
     ↓
 RPCTransport (SSH + JSON-L request/response)
     ↓
@@ -333,7 +333,7 @@ Sessions are long-lived on daemon side. Could support:
 const sessionId = session.id
 await client.disconnect()
 // Later...
-const client2 = CapsuleClient(options)
+const client2 = CapsuleerClient(options)
 const session2 = await client2.reconnect(sessionId)
 const proc = await session2.spawn('shell')  // Works!
 ```

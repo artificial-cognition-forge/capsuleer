@@ -11,7 +11,7 @@
 import { parseConnString } from "../ingress/utils/parseConnString"
 import { CapsuleManager } from "../capsuled/capsule-manager"
 
-export async function attachCommand(connString: string, options: { key?: string; mode?: "shell" | "bun" } = {}) {
+export async function attachCommand(connString: string, options: { key?: string; mode?: "shell" | "typescript" } = {}) {
     // Parse connection string
     const parsed = parseConnString(connString)
     console.log(`Connecting to ${parsed.user}@${parsed.host}:${parsed.port}/${parsed.capsuleName}...`)

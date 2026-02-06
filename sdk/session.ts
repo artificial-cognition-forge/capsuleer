@@ -41,7 +41,7 @@ export function createSession(
     capsuleName,
     createdAt: Date.now(),
 
-    async spawn(runtime: 'shell' | 'bun') {
+    async spawn(runtime: 'shell' | 'typescript') {
       if (isKilled) throw new Error('Session is killed')
 
       const result = await transport.request<{

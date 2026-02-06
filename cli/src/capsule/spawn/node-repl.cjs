@@ -11,6 +11,7 @@ const repl = require('repl');
 repl.start({
   input: process.stdin,
   output: process.stdout,
-  prompt: '> ',
+  prompt: '',
+  ignoreUndefined: true,
   terminal: false,  // Non-terminal mode for proper piping
 });

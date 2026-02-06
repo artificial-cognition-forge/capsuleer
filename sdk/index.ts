@@ -6,9 +6,9 @@
  *
  * @example
  * ```ts
- * import { CapsuleClient } from '@capsuleer/sdk'
+ * import { CapsuleerClient } from '@arcforge/capsuleer-client'
  *
- * const client = CapsuleClient({
+ * const client = CapsuleerClient({
  *   host: '127.0.0.1',
  *   port: 22
  * })
@@ -27,10 +27,10 @@
  * ```
  */
 
-export { CapsuleClient } from './client'
+export { CapsuleerClient as CapsuleerClient } from './client'
 
 export type {
-  CapsuleClientT,
+  CapsuleerClientT,
   Session,
   Process,
   ProcessEvent,

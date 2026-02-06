@@ -70,7 +70,7 @@ export type CapsuleAddress = {
 
 export type CapsuleProcess = {
     id: string
-    runtime: "shell" | "bun"
+    runtime: "shell" | "typescript"
     address: CapsuleAddress
 } & Bun.Subprocess
 

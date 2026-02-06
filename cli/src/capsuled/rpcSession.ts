@@ -35,7 +35,7 @@ export type RPCMessage =
 /** Process status snapshot */
 export interface ProcessStatus {
     id: ProcessId
-    runtime: 'shell' | 'bun'
+    runtime: 'shell' | 'typescript'
     running: boolean
     code?: number
     signal?: string
@@ -47,151 +47,151 @@ export interface ProcessStatus {
  * Fire-and-forget: starts async tasks that feed events through session.emitEvent()
  */
 function subscribeToProcessStreams(
-  process: any,
-  processId: ProcessId,
-  sessionId: SessionId,
-  capsuleId: string,
-  emitEvent: (event: SessionEvent) => void,
-  trace: any
+    process: any,
+    processId: ProcessId,
+    sessionId: SessionId,
+    capsuleId: string,
+    emitEvent: (event: SessionEvent) => void,
+    trace: any
 ): void {
-  // Verify process has required properties
-  if (!process) return
+    // Verify process has required properties
+    if (!process) return
 
-  // Trace: Stream subscription started
-  trace.append({
-    type: 'rpc.stream.subscribe',
-    capsuleId,
-    sessionId,
-    processId,
-  })
+    // Trace: Stream subscription started
+    trace.append({
+        type: 'rpc.stream.subscribe',
+        capsuleId,
+        sessionId,
+        processId,
+    })
 
-  // Subscribe to stdout
-  if (process.stdout) {
-    ;(async () => {
-      try {
-        for await (const chunk of process.stdout) {
-          // Trace: stdout data received
-          trace.append({
-            type: 'rpc.stream.data',
-            capsuleId,
-            sessionId,
-            processId,
-            source: 'stdout',
-            bytes: chunk.length,
-          })
+    // Subscribe to stdout
+    if (process.stdout) {
+        ; (async () => {
+            try {
+                for await (const chunk of process.stdout) {
+                    // Trace: stdout data received
+                    trace.append({
+                        type: 'rpc.stream.data',
+                        capsuleId,
+                        sessionId,
+                        processId,
+                        source: 'stdout',
+                        bytes: chunk.length,
+                    })
 
-          emitEvent({
-            type: 'stdout',
-            processId,
-            data: Buffer.from(chunk).toString('base64'),
-          })
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
+                    emitEvent({
+                        type: 'stdout',
+                        processId,
+                        data: Buffer.from(chunk).toString('base64'),
+                    })
+                }
+            } catch (err) {
+                const errMsg = err instanceof Error ? err.message : String(err)
 
-        // Trace: stdout error
-        trace.append({
-          type: 'rpc.stream.error',
-          capsuleId,
-          sessionId,
-          processId,
-          source: 'stdout',
-          error: errMsg,
-        })
+                // Trace: stdout error
+                trace.append({
+                    type: 'rpc.stream.error',
+                    capsuleId,
+                    sessionId,
+                    processId,
+                    source: 'stdout',
+                    error: errMsg,
+                })
 
-        emitEvent({
-          type: 'error',
-          processId,
-          message: `stdout read error: ${errMsg}`,
-        })
-      }
-    })()
-  }
+                emitEvent({
+                    type: 'error',
+                    processId,
+                    message: `stdout read error: ${errMsg}`,
+                })
+            }
+        })()
+    }
 
-  // Subscribe to stderr
-  if (process.stderr) {
-    ;(async () => {
-      try {
-        for await (const chunk of process.stderr) {
-          // Trace: stderr data received
-          trace.append({
-            type: 'rpc.stream.data',
-            capsuleId,
-            sessionId,
-            processId,
-            source: 'stderr',
-            bytes: chunk.length,
-          })
+    // Subscribe to stderr
+    if (process.stderr) {
+        ; (async () => {
+            try {
+                for await (const chunk of process.stderr) {
+                    // Trace: stderr data received
+                    trace.append({
+                        type: 'rpc.stream.data',
+                        capsuleId,
+                        sessionId,
+                        processId,
+                        source: 'stderr',
+                        bytes: chunk.length,
+                    })
 
-          emitEvent({
-            type: 'stderr',
-            processId,
-            data: Buffer.from(chunk).toString('base64'),
-          })
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
+                    emitEvent({
+                        type: 'stderr',
+                        processId,
+                        data: Buffer.from(chunk).toString('base64'),
+                    })
+                }
+            } catch (err) {
+                const errMsg = err instanceof Error ? err.message : String(err)
 
-        // Trace: stderr error
-        trace.append({
-          type: 'rpc.stream.error',
-          capsuleId,
-          sessionId,
-          processId,
-          source: 'stderr',
-          error: errMsg,
-        })
+                // Trace: stderr error
+                trace.append({
+                    type: 'rpc.stream.error',
+                    capsuleId,
+                    sessionId,
+                    processId,
+                    source: 'stderr',
+                    error: errMsg,
+                })
 
-        emitEvent({
-          type: 'error',
-          processId,
-          message: `stderr read error: ${errMsg}`,
-        })
-      }
-    })()
-  }
+                emitEvent({
+                    type: 'error',
+                    processId,
+                    message: `stderr read error: ${errMsg}`,
+                })
+            }
+        })()
+    }
 
-  // Subscribe to exit
-  if (process.exited && typeof process.exited.then === 'function') {
-    process.exited
-      .then(({ code, signal }: any) => {
-        // Trace: process exited
-        trace.append({
-          type: 'rpc.stream.exit',
-          capsuleId,
-          sessionId,
-          processId,
-          code,
-          signal,
-        })
+    // Subscribe to exit
+    if (process.exited && typeof process.exited.then === 'function') {
+        process.exited
+            .then(({ code, signal }: any) => {
+                // Trace: process exited
+                trace.append({
+                    type: 'rpc.stream.exit',
+                    capsuleId,
+                    sessionId,
+                    processId,
+                    code,
+                    signal,
+                })
 
-        emitEvent({
-          type: 'exit',
-          processId,
-          code,
-          signal,
-        })
-      })
-      .catch((err: any) => {
-        const errMsg = err instanceof Error ? err.message : String(err)
+                emitEvent({
+                    type: 'exit',
+                    processId,
+                    code,
+                    signal,
+                })
+            })
+            .catch((err: any) => {
+                const errMsg = err instanceof Error ? err.message : String(err)
 
-        // Trace: process exit error
-        trace.append({
-          type: 'rpc.stream.error',
-          capsuleId,
-          sessionId,
-          processId,
-          source: 'exit',
-          error: errMsg,
-        })
+                // Trace: process exit error
+                trace.append({
+                    type: 'rpc.stream.error',
+                    capsuleId,
+                    sessionId,
+                    processId,
+                    source: 'exit',
+                    error: errMsg,
+                })
 
-        emitEvent({
-          type: 'error',
-          processId,
-          message: `process error: ${errMsg}`,
-        })
-      })
-  }
+                emitEvent({
+                    type: 'error',
+                    processId,
+                    message: `process error: ${errMsg}`,
+                })
+            })
+    }
 }
 
 /** RPC Session - wraps a capsule session with transport management and event routing */
@@ -204,7 +204,7 @@ export interface RPCSession {
     // Methods
 
     /** Spawn a process in this session */
-    spawn(runtime: 'shell' | 'bun'): Promise<{ processId: ProcessId }>
+    spawn(runtime: 'shell' | 'typescript'): Promise<{ processId: ProcessId }>
 
     /** Kill a process by ID */
     kill(processId: ProcessId): Promise<void>
@@ -316,7 +316,7 @@ export function createRPCSession(
         capsuleName,
         createdAt: Date.now(),
 
-        async spawn(runtime: 'shell' | 'bun') {
+        async spawn(runtime: 'shell' | 'typescript') {
             if (isTerminated) {
                 throw new Error('Session is terminated')
             }
@@ -507,7 +507,7 @@ export function createRPCSession(
 
             return {
                 id: processId,
-                runtime: proc.runtime as 'shell' | 'bun',
+                runtime: proc.runtime as 'shell' | 'typescript',
                 running: !proc.exited,
                 code: proc.exitCode ?? undefined,
                 signal: proc.signalDescription ?? undefined,
@@ -521,7 +521,7 @@ export function createRPCSession(
 
             return Array.from(internalSession.procs.values()).map((proc) => ({
                 id: proc.id as ProcessId,
-                runtime: proc.runtime as 'shell' | 'bun',
+                runtime: proc.runtime as 'shell' | 'typescript',
                 running: !proc.exited,
                 code: proc.exitCode ?? undefined,
                 signal: proc.signalDescription ?? undefined,
