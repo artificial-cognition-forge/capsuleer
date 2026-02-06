@@ -1,4 +1,5 @@
-import { randomUUIDv7, readline } from 'bun'
+import { randomUUIDv7 } from 'bun'
+import readline from 'readline'
 import { trace } from './trace'
 import type {
     RPCSession,
@@ -12,9 +13,10 @@ import type { RPCSessionRegistry } from './rpcSessions'
 
 /** RPC request message types */
 type RPCRequest =
-    | { id: number; method: 'attach-capsule'; params: { capsule: string } }
+    | { id: number; method: 'attach-capsule'; params: { capsuleId: string } }
     | { id: number; method: 'spawn'; params: { runtime: 'shell' | 'bun' } }
     | { id: number; method: 'stdin'; params: { processId: string; data: string } }
+    | { id: number; method: 'stdin-end'; params: { processId: string } }
     | { id: number; method: 'kill'; params: { processId: string } }
     | { id: number; method: 'detach'; params: { processId: string } }
     | { id: number; method: 'status'; params: { processId: string } }
@@ -33,6 +35,11 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
 
     const t = trace()
 
+    // Handler startup
+    t.append({
+        type: 'rpc.handler.started',
+    })
+
     // Create transport abstraction
     const transport: RPCTransport = {
         id: transportId,
@@ -50,8 +57,13 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
     }
 
     // Create line reader for stdin (JSON-L format)
-    const rl = readline({
+    const rl = readline.createInterface({
         input: process.stdin,
+    })
+
+    // Handler is ready
+    t.append({
+        type: 'rpc.handler.ready',
     })
 
     let isProcessing = false
@@ -61,6 +73,12 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
         // Skip empty lines
         if (!line.trim()) continue
 
+        // Debug: log raw line received
+        t.append({
+            type: 'rpc.debug.line.received',
+            line: line.substring(0, 200), // Limit to first 200 chars for logging
+        })
+
         try {
             // Parse JSON request
             let request: RPCRequest
@@ -68,7 +86,24 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
             try {
                 const parsed = JSON.parse(line)
                 request = parsed
+
+                // Log successful parse
+                t.append({
+                    type: 'rpc.request.received',
+                    id: parsed.id || 0,
+                    method: parsed.method || 'unknown',
+                    paramKeys: parsed.params ? Object.keys(parsed.params) : [],
+                })
             } catch (e) {
+                const errMsg = e instanceof Error ? e.message : String(e)
+
+                // Log parse error
+                t.append({
+                    type: 'rpc.debug.parse.error',
+                    line: line.substring(0, 200),
+                    error: errMsg,
+                })
+
                 transport.write({
                     id: 0,
                     error: {
@@ -93,6 +128,15 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
 
             // Route to handler
             try {
+                // Log request dispatch
+                t.append({
+                    type: 'rpc.request.dispatch',
+                    id: request.id,
+                    method: request.method,
+                    capsuleId: currentSession?.capsuleId,
+                    sessionId: currentSessionId,
+                })
+
                 const result = await handleRequest(
                     request,
                     currentSession,
@@ -104,12 +148,29 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
                     }
                 )
 
+                // Log successful response
+                t.append({
+                    type: 'rpc.response.sent',
+                    id: request.id,
+                    method: request.method,
+                    resultKeys: result ? Object.keys(result) : [],
+                })
+
                 transport.write({
                     id: request.id,
                     result,
                 })
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error)
+
+                // Log error response
+                t.append({
+                    type: 'rpc.response.error',
+                    id: request.id,
+                    method: request.method,
+                    code: 'HANDLER_ERROR',
+                    message,
+                })
 
                 transport.write({
                     id: request.id,
@@ -131,6 +192,12 @@ export async function handleRPCStdio(sessionRegistry: RPCSessionRegistry): Promi
         currentSession.detachTransport(transportId)
     }
 
+    // Handler shutdown
+    t.append({
+        type: 'rpc.handler.shutdown',
+        reason: 'stdin_closed',
+    })
+
     process.exit(0)
 }
 
@@ -149,7 +216,7 @@ async function handleRequest(
     switch (request.method) {
         case 'attach-capsule': {
             // Attach to a capsule and create/get its RPC session
-            const capsuleId = request.params.capsule
+            const capsuleId = request.params.capsuleId
             const session = await sessionRegistry.getOrCreate(capsuleId)
 
             // Attach transport to session
@@ -198,6 +265,19 @@ async function handleRequest(
             const data = request.params.data
 
             await currentSession.stdin(processId, data)
+
+            return { ok: true }
+        }
+
+        case 'stdin-end': {
+            // Close stdin on a process
+            if (!currentSession) {
+                throw new Error('No session attached.')
+            }
+
+            const processId = request.params.processId as ProcessId
+
+            await currentSession.stdinEnd(processId)
 
             return { ok: true }
         }

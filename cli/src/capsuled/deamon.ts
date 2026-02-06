@@ -85,10 +85,10 @@ export const daemon = {
             stdio: ["ignore", "ignore", "ignore"],
         })
 
-        t.append({
-            type: "daemon.stopped",
-            reason: "signal",
-        }, { instanceId })
+        // t.append({
+        //     type: "daemon.stopped",
+        //     reason: "signal",
+        // }, { instanceId })
     },
 
     /** Restart the Capsuleer Deamon */

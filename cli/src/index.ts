@@ -8,8 +8,6 @@ export async function main() {
         // Top-level commands
         if (command === "daemon") {
             if (subcommand === "runtime") {
-                // Keep the daemon running - block forever
-                console.log("Daemon started. Press Ctrl+C to stop.")
                 await cli.daemon.runtime()
                 return
             }
@@ -17,10 +15,7 @@ export async function main() {
             if (subcommand === "health") {
                 return await cli.daemon.health()
             }
-            if (subcommand === "stop") {
-                await cli.daemon.stop()
-                return
-            }
+
             if (subcommand === "restart") {
                 const shouldTrace = args.includes("--trace")
                 await cli.daemon.restart({ trace: shouldTrace })
@@ -56,11 +51,6 @@ export async function main() {
             return
         }
 
-        if (command === "stop") {
-            await cli.daemon.stop()
-            return
-        }
-
         if (command === "start") {
             await cli.daemon.runtime()
             return
@@ -76,41 +66,14 @@ export async function main() {
             return
         }
 
-        if (command === "attach") {
-            console.log(args)
-            if (!args[1]) {
-                console.log("attach requires a connection string")
+        // RPC endpoint for client SDK access
+        if (command === "rpc") {
+            if (subcommand === "stdio") {
+                await cli.rpc.stdio()
                 return
             }
-
-            await cli.daemon.capsules.attach(args[1])
-            return
-        }
-
-        // Nested commands: capsule, ssh, log
-        if (command === "capsule" && subcommand) {
-            if (subcommand === "list") {
-                await cli.capsule.list()
-                return
-            }
-
-            if (subcommand === "attach") {
-                const connString = args[2]
-                if (!connString) {
-                    console.error("capsule attach requires a connection string")
-                    console.error("Format: capsuleer capsule attach [user@]host:port/capsule-name")
-                    console.error("Examples:")
-                    console.error("  capsuleer capsule attach localhost:2423/default")
-                    console.error("  capsuleer capsule attach user@127.0.0.1:2423/myapp")
-                    process.exit(1)
-                }
-                const keyFlagIndex = args.findIndex(arg => arg.startsWith("--key="))
-                const key = keyFlagIndex !== -1 ? args[keyFlagIndex].slice(6) : undefined
-                const modeFlagIndex = args.findIndex(arg => arg.startsWith("--mode="))
-                const mode = modeFlagIndex !== -1 ? args[modeFlagIndex].slice(7) as "shell" | "bun" : undefined
-                await cli.capsule.attach(connString, { key, mode })
-                return
-            }
+            console.error("rpc requires a subcommand: stdio")
+            process.exit(1)
         }
 
         if (command === "tail") {

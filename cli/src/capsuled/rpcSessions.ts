@@ -1,5 +1,6 @@
 import { createRPCSession, type RPCSession, type SessionId } from './rpcSession'
-import type { CapsuleManagerInstance } from './capsule-manager'
+import { CapsuleManager, type CapsuleManagerInstance } from './capsule-manager'
+import { trace } from './trace'
 
 /**
  * RPC Session Registry
@@ -48,8 +49,11 @@ export function createRPCSessionRegistry(): RPCSessionRegistry {
         },
 
         async getOrCreate(capsuleId) {
+            const t = trace()
+
+            // Lazy-initialize capsule manager if not already set
             if (!capsuleManager) {
-                throw new Error('Capsule manager not set')
+                capsuleManager = await CapsuleManager()
             }
             // Check if we already have an active session for this capsule
             const existingSessionId = capsuleToSession.get(capsuleId)
@@ -66,6 +70,12 @@ export function createRPCSessionRegistry(): RPCSessionRegistry {
             // Create new RPC session
             const capsule = await capsuleManager.get(capsuleId)
             if (!capsule) {
+                // Emit error event
+                t.append({
+                    type: 'rpc.session.attach.error',
+                    capsuleId,
+                    error: `Capsule not found: ${capsuleId}`,
+                })
                 throw new Error(`Capsule not found: ${capsuleId}`)
             }
 

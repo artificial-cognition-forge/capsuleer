@@ -5,9 +5,6 @@ import { tail } from "./commands/tail"
 export const cli = {
     daemon: daemon,
 
-    /** Stop the daemon. */
-    stop: daemon.stop,
-
     /** Start the daemon. */
     start: daemon.runtime,
 
@@ -18,15 +15,15 @@ export const cli = {
     down: daemon.down,
 
     /** Check daemon health. */
-    health: daemon.health,
+    health: daemon.health, // currntly broken
 
     /** Manage local capsules. */
     capsule: daemon.capsules,
 
     ls: daemon.capsules.list,
 
-    // /** Authenticate with remote capsules. */
-    // auth: auth,
+    /** RPC endpoint for programmatic client access */
+    rpc: daemon.rpc,
 
     /** Tail the capsuleer daemon log. */
     tail: tail,

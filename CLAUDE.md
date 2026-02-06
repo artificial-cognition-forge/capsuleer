@@ -286,4 +286,60 @@ Client → connect(capsule) → Session → spawn(runtime) → Process → event
 **Session Semantics**: Sessions are long-lived daemon-side entities. Client SSH disconnect does not destroy the session. Processes continue running until explicitly killed or session timeout. Enables agent workflows: spawn task → detach → reconnect later → re-attach and observe/cleanup.
 
 **Key Files**:
-- `sdk/` - Client SDK Folder
+- `sdk/index.ts` - Main export and documentation
+- `sdk/client.ts` - CapsuleClient entry point
+- `sdk/transport.ts` - RPC transport layer (SSH, JSON-L, request correlation)
+- `sdk/session.ts` - Session wrapper (process management, event routing)
+- `sdk/process.ts` - Process wrapper (async streams, lifecycle)
+- `sdk/types.ts` - Public type definitions
+- `sdk/examples.ts` - 10 usage pattern examples
+
+## SDK Implementation Details
+
+**Architecture**: The SDK is organized in layers:
+
+```
+CapsuleClient (entry point)
+    ↓
+RPCTransport (SSH + JSON-L request/response)
+    ↓
+Session (process registry + event router)
+    ↓
+Process (async iterables for stdout/stderr/events)
+```
+
+**Key Design Patterns**:
+
+1. **Transport Layer**: `createRPCTransport()` manages the SSH connection, JSON-L serialization, and request/response correlation via numeric IDs. Requests timeout after 30 seconds. Events are broadcast to all listeners.
+
+2. **Session Layer**: `createSession()` wraps an RPC session with process ownership tracking. Routes RPC events to the correct process. Cleans up processes on session kill.
+
+3. **Process Layer**: `createProcess()` implements async iterables for `stdout`, `stderr`, and `events`. Maintains queues of pending data, resolves them as data arrives. The `exited` promise resolves when process exits.
+
+4. **Event Routing**: RPC events from daemon come back unlabeled (no request ID). Session routes by `processId` to the correct process. Process queues events for async iteration.
+
+5. **Async Streams**: Each async iterable is implemented as a generator that pulls from an internal queue, waiting via promise for new data. When process exits, all streams close.
+
+**Error Handling**:
+- Connection errors bubble up from `connect()`
+- RPC errors are thrown with message: `{CODE}: {message}`
+- Process errors are emitted as `ProcessEvent` with type 'error'
+- Detach/kill are best-effort (suppress errors if process already dead)
+- Stdin throws if process is detached
+
+**Reconnection Pattern** (future):
+Sessions are long-lived on daemon side. Could support:
+```ts
+const sessionId = session.id
+await client.disconnect()
+// Later...
+const client2 = CapsuleClient(options)
+const session2 = await client2.reconnect(sessionId)
+const proc = await session2.spawn('shell')  // Works!
+```
+
+**Type Safety**:
+- `SessionId` and `ProcessId` are branded types to prevent mixing
+- All process methods are properly typed
+- Events discriminate by `type` field for exhaustive checking
+- No untyped `any` in public API
