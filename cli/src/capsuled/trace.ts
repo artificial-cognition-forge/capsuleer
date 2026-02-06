@@ -1,6 +1,10 @@
 import { storage } from "../storage/storage"
-import { getInstanceId } from "./traceContext"
 import type { CapsuleerEvent } from "../types/events"
+import { eventTimestamp } from "./utils/eventTimestamp"
+import { randomUUIDv7 } from "bun"
+
+const log: CapsuleerEvent[] = []
+const callbacks = new Set<(event: CapsuleerEvent) => void>()
 
 /**
  * Trace
@@ -9,32 +13,26 @@ import type { CapsuleerEvent } from "../types/events"
  * appends to jsonl log file
  */
 export type CapsuleerTrace = ReturnType<typeof trace>
-const DEBUG = true
 export function trace() {
-    const log: CapsuleerEvent[] = []
-    const callbacks = new Set<(event: CapsuleerEvent) => void>()
-    let seq = 0
 
     return {
         get(): CapsuleerEvent[] {
             return [...log]
         },
 
-        push(event: CapsuleerEvent) {
+        append(event: CapsuleerEvent, opts?: { instanceId?: string }) {
+
             const eventWithTime = {
+                eventId: randomUUIDv7(),
                 ...event,
-                time: {
-                    ms: Date.now(),
-                    seq: seq++
-                }
+                time: eventTimestamp(),
             }
-            if (DEBUG) console.log(eventWithTime)
+
             log.push(eventWithTime)
             callbacks.forEach(cb => cb(eventWithTime))
-            // Fire and forget - don't block on disk I/O
-            storage.log.append(getInstanceId(), eventWithTime).catch((err) => {
-                console.error("Failed to append to trace log:", err)
-            })
+
+            // Append to log.
+            storage.log.event(eventWithTime, opts)
         },
 
         onEvent: (cb: (event: CapsuleerEvent) => void) => {
@@ -42,3 +40,4 @@ export function trace() {
         },
     }
 }
+

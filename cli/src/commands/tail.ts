@@ -17,11 +17,9 @@ export const tail = {
         }
 
         const logFile = logFiles[0] // Most recent (sorted in reverse)
-        console.log(`Tailing ${logFile}`)
-        console.log("Press Ctrl+C to stop\n")
 
         // Spawn tail -f process
-        const proc = spawn(["tail", "-f", logFile], {
+        const proc = spawn(["tail", "-f", "-v", logFile], {
             stdio: ["inherit", "inherit", "inherit"],
         })
 

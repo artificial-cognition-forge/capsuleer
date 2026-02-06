@@ -1,9 +1,9 @@
 export type CapsuleerEvent =
     | DaemonEvent
     | SSHEvent
-    | TmuxEvent
     | CapsuleEvent
     | CtlEvent
+    | RPCEvent
 
 type EventBase = {
     time: {
@@ -24,17 +24,12 @@ type SSHEvent =
     | { type: "ssh.disconnect"; host: string; reason?: string }
     | { type: "ssh.error"; host: string; error: string }
 
-type TmuxEvent =
-    | { type: "tmux.server.started"; serverId: string }
-    | { type: "tmux.server.stopped"; serverId: string }
-    | { type: "tmux.session.created"; serverId: string; session: string }
-    | { type: "tmux.session.killed"; serverId: string; session: string }
-
 type CapsuleEvent =
-    | { type: "capsule.spawned"; capsuleId: string; command: string }
-    | { type: "capsule.output"; capsuleId: string; bytes: number }
-    | { type: "capsule.input"; capsuleId: string; bytes: number }
-    | { type: "capsule.exited"; capsuleId: string; code: number | null }
+    | { type: "capsule.boot"; capsuleId: string }
+    | { type: "capsule.shutdown"; capsuleId: string }
+    | { type: "capsule.session.create"; capsuleId: string; sessionId: string }
+    | { type: "capsule.session.kill"; capsuleId: string; sessionId: string }
+
 
 type CtlEvent =
     | { type: "ctl.install.started"; platform: "linux" | "darwin" | "win32" }
@@ -43,3 +38,10 @@ type CtlEvent =
     | { type: "ctl.uninstall.started"; platform: "linux" | "darwin" | "win32" }
     | { type: "ctl.uninstall.completed"; platform: "linux" | "darwin" | "win32"; path: string }
     | { type: "ctl.uninstall.failed"; platform: "linux" | "darwin" | "win32"; error: string }
+
+type RPCEvent =
+    | { type: "rpc.session.attach"; capsuleId: string; sessionId: string }
+    | { type: "rpc.session.detach"; capsuleId: string; sessionId: string; transportId: string }
+    | { type: "rpc.process.spawn"; capsuleId: string; sessionId: string; processId: string; runtime: "shell" | "bun" }
+    | { type: "rpc.process.exit"; capsuleId: string; sessionId: string; processId: string; code: number; signal?: string }
+    | { type: "rpc.process.error"; capsuleId: string; sessionId: string; processId: string; error: string }

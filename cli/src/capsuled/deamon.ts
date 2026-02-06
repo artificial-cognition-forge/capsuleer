@@ -1,33 +1,31 @@
 import { storage } from "../storage/storage"
 import { writeAuthorizedKeysFile } from "../storage/keys"
-import { CapsuleManager, type CapsuleManagerInstance } from "./capsule-manager"
-import { trace, type CapsuleerTrace } from "./trace"
-import { setTraceContext, clearTraceContext, getTrace } from "./traceContext"
+import { CapsuleManager } from "./capsule-manager"
+import { trace } from "./trace"
 import { randomUUIDv7, spawn } from "bun"
 import { homedir } from "os"
 import { join } from "path"
 import { checkHealth, type CapsuleerDeamonStatus } from "../commands/health"
-import { parseCapsuleUrl } from "./utils/parseCapsuleUrl"
-
-type CapsuleerRuntimeCtx = {
-    daemonInstanceId: string
-    capsuleManager: CapsuleManagerInstance
-    trace: CapsuleerTrace
-}
-
+import type { CapsuleerEvent } from "../types/events"
+import { daemonInstanceId } from "./utils/daemonInstanceId"
+import { createRPCSessionRegistry } from "./rpcSessions"
+import { handleRPCStdio } from "./rpcStdio"
 
 /** Capsuleer Daemon */
 export const daemon = {
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
         const daemonInstanceId = randomUUIDv7()
+        process.env.CAPSULEER_DAEMON_INSTANCE_ID = daemonInstanceId
+
         const log = trace()
         const manager = await CapsuleManager()
 
-        setTraceContext(log, daemonInstanceId)
+        // Set capsule manager on RPC session registry
+        daemon.sessions.setCapsuleManager(manager)
 
         // emit startup event
-        log.push({
+        log.append({
             type: "daemon.started",
             version: "0.1.0",
         })
@@ -46,7 +44,7 @@ export const daemon = {
         // Block forever until signal (Ctrl+C or systemd stop)
         const handleShutdown = async () => {
             console.log("\nShutting down gracefully...")
-            await daemon.stop()
+            await daemon.down()
             process.exit(0)
         }
 
@@ -60,27 +58,26 @@ export const daemon = {
 
     /** Start daemon in background and return immediately */
     async up() {
-        process.title = "capsuleerd"
-        const logsDir = join(homedir(), ".capsuleer", "logs")
-        const logFile = join(logsDir, "daemon.log")
         const scriptsDir = join(import.meta.dirname, "../scripts")
         const startScript = join(scriptsDir, "daemon/start.sh")
 
         // Spawn the daemon in background
         spawn({
-            cmd: ["bash", startScript, logFile],
+            cmd: ["bash", startScript],
             detached: true,
             stdio: ["ignore", "ignore", "ignore"],
             env: process.env
         })
-
-        console.log("Daemon started in background (logs at " + logFile + ")")
     },
 
     /** Stop daemon and return immediately */
     async down() {
+        const t = trace()
         const scriptsDir = join(import.meta.dirname, "../scripts")
         const stopScript = join(scriptsDir, "daemon/stop.sh")
+        const instanceId = daemonInstanceId
+
+        await daemon.capsules.stop()
 
         // Spawn the daemon in background
         spawn({
@@ -88,33 +85,22 @@ export const daemon = {
             stdio: ["ignore", "ignore", "ignore"],
         })
 
-        console.log("Daemon stopped")
-    },
-
-    /** Stop the Capsuleer Deamon */
-    async stop() {
-        const log = getTrace()
-
-        if (log) {
-            log.push({
-                type: "daemon.stopped",
-                reason: "signal",
-            })
-        }
-
-        clearTraceContext()
+        t.append({
+            type: "daemon.stopped",
+            reason: "signal",
+        }, { instanceId })
     },
 
     /** Restart the Capsuleer Deamon */
     async restart() {
-        const log = trace()
-        const daemonInstanceId = randomUUIDv7()
-        setTraceContext(log, daemonInstanceId)
-
-        await daemon.stop()
+        await daemon.down()
         await daemon.up()
+    },
 
-        clearTraceContext()
+    /** Emit an event to the daemon log. */
+    async emit(event: CapsuleerEvent) {
+        const t = trace()
+        await t.append(event)
     },
 
     /** Get the current status of the Capsuleer Deamon */
@@ -122,58 +108,27 @@ export const daemon = {
         return await checkHealth()
     },
 
-    /** Daemon capsules */
-    capsules: {
-        /** List all local capsules. */
-        async list() {
-            const manager = await CapsuleManager()
-            const capsules = await manager.list()
-            if (capsules.length === 0) {
-                console.log("No capsules running")
-                return
-            }
-            console.log(`Capsules (${capsules.length}):`)
-            for (const capsule of capsules) {
-                console.log(`  - ${capsule.blueprint.name}`)
-            }
-        },
+    capsules: await CapsuleManager(),
 
-        /** 
-         * Capsuleer Attach
-         * 
-         * Attach to a running capsule process.
-         * 
-         * Usage:
-         * 
-         * **Local**
-         * ```ts
-         *"capsuleer attach <capsule-name>"
-         * ```
-         * 
-         * **Remote**
-         * ```ts
-         *"capsuleer attach <host>:<port>/<capsule-name>"
-         * ```
-         */
-        async attach(connString: string) {
-            const manager = await CapsuleManager()
-            const connection = parseCapsuleUrl(connString)
-            return await manager.attach(connection)
-        },
-    },
+    // RPC Session Registry - manages all RPC sessions at daemon level
+    sessions: createRPCSessionRegistry(),
 
-    /** 
-     * Remote Procedure Call 
-     * 
+    /**
+     * Remote Procedure Call
+     *
      * for machine use of the capsuleer cli
      */
     rpc: {
-        /** 
+        /**
          * Capsuleer RPC
-         * 
+         *
          * Full control over the capsuleer cli over SSH.
+         *
+         * Runs in an SSH exec channel, reads JSON-L RPC requests from stdin,
+         * and writes JSON-L responses + events to stdout.
          */
         async stdio() {
+            return await handleRPCStdio(daemon.sessions)
         }
     },
 

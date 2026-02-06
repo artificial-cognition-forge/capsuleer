@@ -1,9 +1,8 @@
-import { randomUUIDv7 } from "bun"
-import { spawn as ptySpawn, type IPty } from "node-pty"
-
-type CapsuleClientMode = "shell" | "bun"
-
-type ProcReg = Record<string, CapsuleProcess>
+import { trace } from "../capsuled/trace"
+import { createSessionManager, type CapsuleSession } from "./sessions"
+import { createShellSpawner } from "./spawn/shell"
+import { createReplSpawner } from "./spawn/repl"
+import { createAttachHandler } from "./attach"
 
 /**
  * The main Capsule blueprint type
@@ -49,18 +48,32 @@ export function defineCapsule(input: DefineCapsuleInput): CapsuleBlueprint {
     }
 }
 
-type CapsuleState = {
+export type CapsuleState = {
     sessionName: string
     started: boolean
 }
 
-type SpawnOptions = {
+export type CapsuleSpawnOptions = {
     name: string
     endpoint: string
     host: string
     port: number
     pty?: boolean
 }
+
+export type CapsuleAddress = {
+    name: string
+    endpoint: string
+    host: string
+    port: number
+}
+
+export type CapsuleProcess = {
+    id: string
+    runtime: "shell" | "bun"
+    address: CapsuleAddress
+} & Bun.Subprocess
+
 
 /**
  * Capsule
@@ -74,153 +87,71 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
         started: false,
     }
 
-    const reg: ProcReg = {}
+    const sessionMgr = createSessionManager(blueprint.name)
 
-    return {
-        blueprint,
+    // Create spawn and attach handlers with sessionMgr context
+    const shellSpawner = createShellSpawner(sessionMgr)
+    const replSpawner = createReplSpawner(sessionMgr)
+    const attachHandler = createAttachHandler(sessionMgr)
+
+    const capsule = {
+        blueprint: blueprint,
 
         /** Boot the capsule */
         async start() {
+            const t = trace()
             if (state.started) return
 
-            // start bun repl
+            t.append({
+                type: "capsule.boot",
+                capsuleId: blueprint.name,
+            })
 
             state.started = true
         },
 
+        sessions: sessionMgr,
+
         /** Create a new process in the capsule */
         spawn: {
-            async shell(opts: SpawnOptions): Promise<CapsuleProcess> {
-                let terminal: Bun.Terminal | undefined;
-
-                if (opts.pty) {
-                    terminal = new Bun.Terminal({
-                        cols: process.stdout.columns,
-                        rows: process.stdout.rows,
-                        data: (term, data) => Bun.stdout.write(data),
-                    });
-                }
-
-                const subprocess = Bun.spawn(["bash"], {
-                    terminal,
-                })
-
-                const capsuleProcess: CapsuleProcess = {
-                    id: randomUUIDv7(),
-                    runtime: "shell",
-                    address: {
-                        endpoint: opts.endpoint,
-                        host: opts.host,
-                        name: opts.name,
-                        port: opts.port || 22,
-                    },
-                    ...subprocess,
-                    terminal: subprocess.terminal, // <-- save the terminal reference here
-                };
-
-                reg[opts.endpoint] = capsuleProcess
-
-                return capsuleProcess
-            },
-
-            /** Spawn a bun repl process. */
-            async bun(opts: SpawnOptions): Promise<CapsuleProcess> {
-                let terminal: Bun.Terminal | undefined;
-
-                if (opts.pty) {
-                    terminal = new Bun.Terminal({
-                        cols: process.stdout.columns,
-                        rows: process.stdout.rows,
-                        data: (term, data) => Bun.stdout.write(data),
-                    })
-                }
-
-                const subprocess = Bun.spawn(["node", "-i", "-r", "./test.ts"], {
-                    terminal,
-                })
-
-                const capsuleProcess: CapsuleProcess = {
-                    id: randomUUIDv7(),
-                    runtime: "bun",
-                    address: {
-                        endpoint: opts.endpoint,
-                        host: opts.host,
-                        name: opts.name,
-                        port: opts.port || 22,
-                    },
-                    ...subprocess,
-                    terminal: subprocess.terminal, // <-- save the terminal reference here
-                }
-
-                reg[opts.endpoint] = capsuleProcess
-
-                return capsuleProcess
-            },
+            shell: shellSpawner,
+            repl: replSpawner,
         },
 
-        async list() {
-            return Object.values(reg)
-        },
+        attach: attachHandler,
 
-        /** Attach to a running capsule using a PTY */
-        async attach(endpoint: string) {
-            const proc = reg[endpoint]!;
-            if (!proc.terminal) throw new Error("Process is not interactive");
-
-            const terminal = proc.terminal;
-
-            // Forward input
-            if (process.stdin.isTTY) process.stdin.setRawMode(true);
-            process.stdin.resume();
-
-            process.stdout.write("\x1b[?1049h"); // switch to alternate screen
-
-            // Listen for SIGINT manually
-            const reader = process.stdin[Symbol.asyncIterator]();
-
-            try {
-                for await (const chunk of reader) {
-                    const str = new TextDecoder().decode(chunk);
-
-                    // Detect Ctrl+C
-                    if (str === "\x03") { // ASCII 3 = Ctrl+C
-                        proc.kill("SIGINT"); // send SIGINT to the subprocess
-                        continue; // don’t forward Ctrl+C to terminal.write
-                    }
-
-                    terminal.write(str);
-                }
-            } catch (e) {
-                // reader canceled
-            } finally {
-                if (process.stdin.isTTY) process.stdin.setRawMode(false);
-                process.stdout.write("\x1b[?1049l"); // back to main screen
+        /**
+         * Connect a client to this capsule
+         *
+         * Called by daemon after SSH authentication.
+         * Creates and returns a new session for the authenticated client.
+         *
+         * Throws if capsule is not started.
+         */
+        async connect(clientId: string): Promise<CapsuleSession> {
+            if (!state.started) {
+                throw new Error("Capsule is not started")
             }
 
-            await proc.exited;
+            return sessionMgr.create(clientId)
         },
 
         /** Shutdown the capsule*/
         async stop() {
             if (!state.started) return
 
+            const t = trace()
+
+            t.append({
+                type: "capsule.shutdown",
+                capsuleId: blueprint.name,
+            })
+
             state.started = false
         },
-
     }
+
+    return capsule
 }
 
 export type CapsuleInstance = Awaited<ReturnType<typeof Capsule>>
-
-type CapsuleAddress = {
-    name: string
-    endpoint: string
-    host: string
-    port: number
-}
-
-type CapsuleProcess = {
-    id: string
-    runtime: "shell" | "bun"
-    address: CapsuleAddress
-} & Bun.Subprocess

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
-import { getTrace } from '../capsuled/traceContext'
+import { trace } from '../capsuled/trace'
 
 /** capsuled storage - systemd/launchd service file installation */
 export const capsuled = {
@@ -43,9 +43,9 @@ export const capsuled = {
             return
         }
 
-        const log = getTrace()
+        const log = trace()
 
-        log.push({
+        log.append({
             type: "ctl.install.started",
             platform,
         })
@@ -62,7 +62,7 @@ export const capsuled = {
                 throw new Error(`Unsupported platform: ${platform}`)
             }
 
-            log.push({
+            log.append({
                 type: "ctl.install.completed",
                 platform,
                 path: result,
@@ -70,7 +70,7 @@ export const capsuled = {
 
             return result
         } catch (error: any) {
-            log.push({
+            log.append({
                 type: "ctl.install.failed",
                 platform,
                 error: error.message,
@@ -82,9 +82,9 @@ export const capsuled = {
     /** Auto detect platform and uninstall capsuled. */
     async uninstall() {
         const platform = process.platform as "linux" | "darwin" | "win32"
-        const log = getTrace()
+        const log = trace()
 
-        log.push({
+        log.append({
             type: "ctl.uninstall.started",
             platform,
         })
@@ -101,7 +101,7 @@ export const capsuled = {
                 throw new Error(`Unsupported platform: ${platform}`)
             }
 
-            log.push({
+            log.append({
                 type: "ctl.uninstall.completed",
                 platform,
                 path: result,
@@ -109,7 +109,7 @@ export const capsuled = {
 
             return result
         } catch (error: any) {
-            log.push({
+            log.append({
                 type: "ctl.uninstall.failed",
                 platform,
                 error: error.message,

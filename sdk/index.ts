@@ -2,11 +2,28 @@ import type { CapsuleBlueprint } from "cli/src/capsule/defineCapsule"
 import { Client, type ClientChannel } from "ssh2"
 
 type ConnectionOptions = {
+    /** Capsule Name */
+    name: string
+
+    /** Capsule Endpoint */
+    endpoint: string
+}
+
+type CapsuleSession = {
+    id: string
+    clientId: string
+
+    runtime: "shell" | "bun"
+    address: CapsuleAddress
+
+    spawn(opts: SpawnOptions): Promise<CapsuleProcess>
+    kill(): void
+    send(): void
+}
+
+type CapsuleClientOpts = {
     host: string
     port: number
-    username: string
-    privateKey?: string
-    agent?: string
 }
 
 /** 
@@ -15,7 +32,8 @@ type ConnectionOptions = {
  * Connect to a remote capsule server and manage processes
  * programmatically.
  */
-export function CapsuleClient() {
+export function CapsuleClient(clientOpts: CapsuleClientOpts) {
+    const { host, port } = clientOpts
     const client = new Client()
     let rpcStream: ClientChannel | null = null
 
@@ -24,9 +42,11 @@ export function CapsuleClient() {
     }
 
     return {
-        async connect(opts: ConnectionOptions) {
+        async connect(opts: ConnectionOptions): Promise<CapsuleSession> {
             return new Promise(async (resolve, reject) => {
                 client.on("ready", () => {
+
+                    /** explicitly go through the rpc endpoints */
                     client.exec("~/.capsuleer/scripts/capsuleer.sh rpc stdio", (err, stream) => {
                         if (err) {
                             reject(err)
@@ -41,7 +61,6 @@ export function CapsuleClient() {
                             // you will likely emit connection lost here later
                         })
 
-
                         stream.on("data", (data) => {
                             console.log("[capsuleeer stdout]", data.toString())
                         })
@@ -53,7 +72,6 @@ export function CapsuleClient() {
 
                         resolve(0)
                     })
-
 
                     client.shell(
                         {
@@ -74,74 +92,31 @@ export function CapsuleClient() {
                 })
 
                 client.on("error", reject)
-                console.log("AGENT", process.env.SSH_AUTH_SOCK)
 
                 client.connect({
-                    host: opts.host,
-                    port: opts.port,
-                    username: opts.username,
-                    debug: console.log,
-                    // privateKey: await Bun.file("~/.ssh/id_ed25519").text(),
+                    host: host,
+                    port: port,
+                    username: "",
+                    // debug: console.log,
+
+                    // Auth config
                     agent: process.env.SSH_AUTH_SOCK,
-                    // tryKeyboard: false,
                     agentForward: true,
                 })
             })
 
         },
 
-        /** Spawn a remote process. */
-        async spawn(opts: SpawnOptions): Promise<CapsuleProcess> {
-            // spawn a remote process
-            // return a CapsuleProcess
-        },
-
-        async disconnect() {
-            // disconnect via ssh
-        },
-
-        async on() { },
-
         /** Remote capsule informnation */
         capsules: {
             /** List available capsules */
-            async list(): CapsuleBlueprint[] {
-
-            },
-            async attach(): Promise<CapsuleProcess> { },
+            async list(): Promise<CapsuleBlueprint[]> { },
         }
     }
 }
 
 type SpawnOptions = {
     runtime: "shell" | "bun"
-    capsule: string
-    endpoint: string
-}
-type RpcEnvelope =
-    | RpcRequest
-    | RpcEvent
-    | RpcResponse
-
-type RpcRequest = {
-    kind: "request"
-    id: string
-    method: string
-    params?: any
-}
-
-type RpcResponse = {
-    kind: "response"
-    id: string
-    result?: any
-    error?: any
-}
-
-type RpcEvent = {
-    kind: "event"
-    topic: string
-    processId?: string
-    payload?: any
 }
 
 type CapsuleAddress = {
@@ -161,11 +136,25 @@ type CapsuleProcess = {
     stderr: AsyncIterable<Uint8Array>
     stdin: (data: string | Uint8Array) => Promise<void>
 
-    kill: () => Promise<void>
-    detach: () => Promise<void>
-    on: (event: string, callback: (code: number) => void) => void
+    /** 
+     * Events
+     * 
+     * Combination of stdout and stderr and stdin
+     * 
+     * ```ts
+     *for await (const evt of proc.events) {
+     *    if (evt.kind === "stdout") {}
+     *    if (evt.kind === "stderr") {}
+     *    if (evt.kind === "exit") {}
+     *}
+     * ```
+     */
+    events: AsyncIterable<ProcessEvent>
 
-    exit: Promise<{ code: number, signal?: string }>
+    /** Detach from the process without killing it. */
+    detach: () => Promise<void>
+
+    exited: Promise<{ code: number, signal?: string }>
 
     status(): Promise<{
         running: boolean
@@ -176,31 +165,34 @@ type CapsuleProcess = {
 }
 
 export async function main() {
-    const client = CapsuleClient()
-
-    await client.connect({
+    const client = CapsuleClient({
         host: "127.0.0.1",
         port: 22,
-        username: "cody",
-        agent: process.env.SSH_AUTH_SOCK,
     })
 
-    const proc = await client.spawn({
-        capsule: "default",
-        endpoint: "shell",
+    const sesh = await client.connect({
+        name: "default",
+        endpoint: "default",
+    })
+
+    const proc = await sesh.spawn({
         runtime: "shell",
     })
 
-    for await (const chunk of proc.stdout) {
+    proc.stdin("console.log('hello world')")
+
+    for await (const chunk of proc.events) {
         console.log(chunk.toString())
     }
 
-    for await (const chunk of proc.stderr) {
-        console.error(chunk.toString())
-    }
-
-    proc.stdin("echo hello world\n")
-
+    await proc.exited
 }
 
 main()
+
+type ProcessEvent =
+    | { type: "stdout", data: Buffer }
+    | { type: "stderr", data: Buffer }
+    | { type: "exit", code: number }
+    | { type: "error", error: any }
+    | { type: "lifecycle", state: string }

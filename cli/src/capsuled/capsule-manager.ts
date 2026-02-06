@@ -1,5 +1,5 @@
 import { Capsule, type CapsuleBlueprint, type CapsuleInstance } from "../capsule/defineCapsule"
-import { type CapsuleConnectionRequest } from "./utils/parseCapsuleUrl"
+import { trace } from "./trace"
 
 // Stub for now, later this will stored on disk
 export const capsuleRegistry: Record<string, CapsuleBlueprint> = {
@@ -21,9 +21,10 @@ let bootPromise: Promise<CapsuleManagerInstance> | null = null
 
 export type CapsuleManagerInstance = {
     start(): Promise<void>
-    list(): Promise<CapsuleInstance[]>
+    list(): Promise<void>
     get(id: string): Promise<CapsuleInstance | null>
-    attach(name: CapsuleConnectionRequest): Promise<void>
+    // attach(connString: string): Promise<void> // later (pty entry point)
+    stop(): Promise<void>
 }
 
 /**
@@ -59,6 +60,7 @@ export async function CapsuleManager(): Promise<CapsuleManagerInstance> {
 async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
     const capsuleConfigs = Object.values(capsuleRegistry)
     const capsules = new Map<string, CapsuleInstance>()
+    const t = trace()
 
     for (const config of capsuleConfigs) {
         const capsule = await Capsule(config)
@@ -73,60 +75,29 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
             }
         },
 
-        async list(): Promise<CapsuleInstance[]> {
-            return Array.from(capsules.values())
+        async list() {
+            const caps = Array.from(capsules.values())
+
+            if (caps.length === 0) {
+                console.log("No capsules running")
+                return
+            }
+
+            console.log(`Capsules (${caps.length}):`)
+            for (const capsule of caps) {
+                console.log(`  - ${capsule.blueprint.name}`)
+            }
         },
 
         async get(id: string): Promise<CapsuleInstance | null> {
             return capsules.get(id) || null
         },
 
-        /** 
-         * Capsule Attach
-         * 
-         * Attach to a running capsule process.
-         * 
-         * @returns
-         * A promise that resolves when the process ends.
-         * 
-         */
-        async attach(req: CapsuleConnectionRequest) {
-            const name = req.capsuleName
-            const endpoint = req.endpoint
-            const capsuleName = req.capsuleName
-
-            const capsule = capsules.get(name) as CapsuleInstance
-
-            if (!capsule) {
-                console.log(Object.keys(capsules))
-                throw new Error(`Capsule not found: ${name}`)
+        async stop() {
+            const caps = Array.from(capsules.values())
+            for (const capsule of caps) {
+                await capsule.stop()
             }
-
-            await capsule.spawn.shell({
-                name: name,
-                endpoint: endpoint,
-                host: "127.0.0.1",
-                port: 22,
-                pty: true,
-            })
-
-            await capsule.spawn.bun({
-                name: name,
-                endpoint: `${endpoint}/repl`,
-                host: "127.0.0.1",
-                port: 22,
-                pty: true,
-            })
-
-            return await capsule.attach(`${endpoint}/repl`)
-
-            let fullName = name
-            if (endpoint !== "shell") {
-                fullName = `${name}/${endpoint}`
-            }
-
-            // todo attach to thing
-            // await tmux.window.attach(capsuleName, fullName)
         },
     }
 }

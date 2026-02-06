@@ -1,0 +1,1 @@
+export const daemonInstanceId = process.env?.CAPSULEER_DAEMON_INSTANCE_ID || "fuck"
