@@ -20,16 +20,11 @@ type CapsuleerRuntimeCtx = {
 export const daemon = {
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
-        process.title = "capsuleerd"
-        console.log("DAEMON ENV", process.env)
         const daemonInstanceId = randomUUIDv7()
         const log = trace()
         const manager = await CapsuleManager()
-        // Set global trace context for all modules
 
         setTraceContext(log, daemonInstanceId)
-
-        // Save daemon PID for later cleanup
 
         // emit startup event
         log.push({
@@ -43,9 +38,6 @@ export const daemon = {
         // Write capsuleer authorized keys to SSH's authorized_keys file
         const sshKeysPath = join(homedir(), ".ssh", "authorized_keys")
         writeAuthorizedKeysFile(sshKeysPath)
-
-        // start tmux
-        // await tmux.server.start()
 
         // start all capsules
         await manager.start()
@@ -74,7 +66,6 @@ export const daemon = {
         const scriptsDir = join(import.meta.dirname, "../scripts")
         const startScript = join(scriptsDir, "daemon/start.sh")
 
-
         // Spawn the daemon in background
         spawn({
             cmd: ["bash", startScript, logFile],
@@ -88,6 +79,15 @@ export const daemon = {
 
     /** Stop daemon and return immediately */
     async down() {
+        const scriptsDir = join(import.meta.dirname, "../scripts")
+        const stopScript = join(scriptsDir, "daemon/stop.sh")
+
+        // Spawn the daemon in background
+        spawn({
+            cmd: ["bash", stopScript],
+            stdio: ["ignore", "ignore", "ignore"],
+        })
+
         console.log("Daemon stopped")
     },
 
@@ -100,14 +100,6 @@ export const daemon = {
                 type: "daemon.stopped",
                 reason: "signal",
             })
-        }
-
-
-        // Kill tmux server with force to ensure all sessions are terminated
-        try {
-            // await tmux.exec(["kill-server"])
-        } catch (err) {
-            // Silently ignore if server doesn't exist - this is normal
         }
 
         clearTraceContext()

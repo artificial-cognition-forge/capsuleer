@@ -2,7 +2,9 @@
 # Start Capsuleer daemon in background with explicit PATH
 
 LOG_FILE="${1:-.capsuleer/logs/daemon.log}"
+PID_FILE="$HOME/.capsuleer/daemon.pid"
 mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$(dirname "$PID_FILE")"
 
 source ~/.profile
 nohup env \
@@ -10,5 +12,5 @@ nohup env \
   SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
   PATH="$PATH" \
   nice -n 10 \
-  bash -c 'exec -a capsuleerd capsuleer daemon runtime' \
+  bash -c 'echo $$ > "'$PID_FILE'" && exec -a capsuleerd capsuleer daemon runtime' \
   >> "$LOG_FILE" 2>&1 &
