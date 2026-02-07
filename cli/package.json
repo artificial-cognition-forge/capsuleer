@@ -6,15 +6,9 @@
   "bin": {
     "capsuleer": "./bin/capsuleer.ts"
   },
-  "scripts": {
-    "dev": "bun run src/index.ts",
-    "test": "bun test"
-  },
+  "scripts": {},
   "devDependencies": {
     "@types/bun": "latest"
   },
-  "dependencies": {
-    "@arcforge/capsuleer": "..",
-    "@arcforge/capsuleer-core": "/home/cody/git/capsuleer"
-  }
+  "dependencies": {}
 }

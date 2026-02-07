@@ -27,28 +27,36 @@ export function createAttachHandler(sessionMgr: SessionManager) {
 
         process.stdout.write("\x1b[?1049h"); // switch to alternate screen
 
-        // Listen for SIGINT manually
+        // Forward SIGINT to child process instead of exiting parent
+        const sigintHandler = () => {
+            proc.kill("SIGINT");
+        };
+        process.on("SIGINT", sigintHandler);
+
+        // Listen for stdin
         const reader = process.stdin[Symbol.asyncIterator]();
 
         try {
-            for await (const chunk of reader) {
-                const str = new TextDecoder().decode(chunk);
-
-                // Detect Ctrl+C
-                if (str === "\x03") { // ASCII 3 = Ctrl+C
-                    proc.kill("SIGINT"); // send SIGINT to the subprocess
-                    continue; // don't forward Ctrl+C to terminal.write
+            // Race: either stdin closes or process exits
+            const inputTask = (async () => {
+                try {
+                    for await (const chunk of reader) {
+                        terminal.write(chunk);
+                    }
+                } catch (e) {
+                    // reader canceled
                 }
+            })();
 
-                terminal.write(str);
-            }
-        } catch (e) {
-            // reader canceled
+            // Wait for either stdin to close or process to exit
+            await Promise.race([
+                inputTask,
+                proc.exited
+            ]);
         } finally {
+            process.removeListener("SIGINT", sigintHandler);
             if (process.stdin.isTTY) process.stdin.setRawMode(false);
             process.stdout.write("\x1b[?1049l"); // back to main screen
         }
-
-        await proc.exited;
     }
 }

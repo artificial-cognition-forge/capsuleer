@@ -337,7 +337,7 @@ export function createRPCSession(
                 let process
                 if (runtime === 'shell') {
                     process = await capsuleInstance.spawn.shell(internalSession.id, spawnOpts)
-                } else if (runtime === 'bun') {
+                } else if (runtime === 'typescript') {
                     process = await capsuleInstance.spawn.repl(internalSession.id, spawnOpts)
                 } else {
                     throw new Error(`Unknown runtime: ${runtime}`)

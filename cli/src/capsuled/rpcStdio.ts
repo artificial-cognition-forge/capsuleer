@@ -243,7 +243,7 @@ async function handleRequest(
             }
 
             const runtime = request.params.runtime
-            if (runtime !== 'shell' && runtime !== 'bun') {
+            if (runtime !== 'shell' && runtime !== 'typescript') {
                 throw new Error(`Invalid runtime: ${runtime}`)
             }
 

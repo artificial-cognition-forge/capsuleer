@@ -325,9 +325,10 @@ async function example10_bunRuntime() {
   })
 
   const session = await client.connect('default')
-  const proc = await session.spawn('bun')
+  const proc = await session.spawn('typescript')
 
-  proc.stdin('console.log("Hello from Bun")\n')
+  proc.stdin('console.log(value)\n')
+  proc.stdin('weather.get()')
   await proc.stdinEnd()
 
   for await (const chunk of proc.stdout) {
@@ -341,7 +342,7 @@ async function example10_bunRuntime() {
 }
 
 // Uncomment to run examples:
-// example1_simpleShellCommand()
+example1_simpleShellCommand()
 // example2_realtimeOutput()
 // example3_stdoutAndStderr()
 // example4_backgroundTask()
@@ -350,4 +351,4 @@ async function example10_bunRuntime() {
 // example7_errorHandling()
 // example8_timeout()
 // example9_statusPolling()
-example10_bunRuntime()
+// example10_bunRuntime()

@@ -1,5 +1,5 @@
 import { Capsule, type CapsuleBlueprint, type CapsuleInstance } from "../capsule/defineCapsule"
-import { trace } from "./trace"
+import { parseCapsuleUrl } from "./utils/parseCapsuleUrl"
 
 // Stub for now, later this will stored on disk
 export const capsuleRegistry: Record<string, CapsuleBlueprint> = {
@@ -23,7 +23,7 @@ export type CapsuleManagerInstance = {
     start(): Promise<void>
     list(): Promise<void>
     get(id: string): Promise<CapsuleInstance | null>
-    // attach(connString: string): Promise<void> // later (pty entry point)
+    attach(connectionString: string): Promise<void>
     stop(): Promise<void>
 }
 
@@ -60,7 +60,6 @@ export async function CapsuleManager(): Promise<CapsuleManagerInstance> {
 async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
     const capsuleConfigs = Object.values(capsuleRegistry)
     const capsules = new Map<string, CapsuleInstance>()
-    const t = trace()
 
     for (const config of capsuleConfigs) {
         const capsule = await Capsule(config)
@@ -87,6 +86,41 @@ async function createCapsuleManager(): Promise<CapsuleManagerInstance> {
             for (const capsule of caps) {
                 console.log(`  - ${capsule.blueprint.name}`)
             }
+        },
+
+        async attach(connectionString: string): Promise<void> {
+            const conn = parseCapsuleUrl(connectionString)
+
+            const capsule = capsules.get(conn.capsuleName)
+            if (!capsule) {
+                console.error(`No capsule found with name: ${conn.capsuleName}`)
+                return
+            }
+
+            // Ensure capsule is started
+            await capsule.start()
+
+            // Create a session for this attach
+            const session = await capsule.connect(`attach:${Date.now()}`)
+
+            // Map endpoint to runtime: "repl" or "typescript" → typescript, anything else → shell
+            const runtime: 'shell' | 'typescript' = (conn.endpoint === 'repl' || conn.endpoint === 'typescript') ? 'typescript' : 'shell'
+
+            // Spawn the process
+            const spawnOpts = {
+                name: conn.capsuleName,
+                endpoint: conn.endpoint,
+                host: conn.host,
+                port: parseInt(conn.port),
+                pty: true, // Enable PTY for interactive terminal (both shell and Node REPL)
+            }
+
+            const process = runtime === 'shell'
+                ? await capsule.spawn.shell(session.id, spawnOpts)
+                : await capsule.spawn.repl(session.id, spawnOpts)
+
+            // Attach to the PTY
+            await capsule.attach(session.id, process.id)
         },
 
         async get(id: string): Promise<CapsuleInstance | null> {

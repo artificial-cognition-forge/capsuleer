@@ -44,15 +44,28 @@ export function createReplSpawner(sessionMgr: SessionManager) {
         const replScript = join(import.meta.dirname, 'node-repl.cjs')
         const nodeExecutable = findNodeExecutable()
 
-        const subprocess = Bun.spawn([nodeExecutable, replScript], {
+        let spawnOpts: any = {
             stdin: "pipe",
             stdout: "pipe",
             stderr: "pipe",
-        })
+        }
+
+        let terminal: any = undefined
+
+        if (opts.pty) {
+            terminal = new Bun.Terminal({
+                cols: process.stdout.columns,
+                rows: process.stdout.rows,
+                data: (_term, data) => Bun.stdout.write(data),
+            })
+            spawnOpts.terminal = terminal
+        }
+
+        const subprocess = Bun.spawn([nodeExecutable, replScript], spawnOpts)
 
         const capsuleProcess: CapsuleProcess = {
             id: randomUUIDv7(),
-            runtime: "bun",
+            runtime: "typescript",
             address: {
                 endpoint: opts.endpoint,
                 host: opts.host,
@@ -66,7 +79,7 @@ export function createReplSpawner(sessionMgr: SessionManager) {
             exitCode: subprocess.exitCode,
             signalDescription: (subprocess as any).signalDescription,
             kill: subprocess.kill.bind(subprocess),
-            terminal: undefined,
+            terminal: terminal || undefined,
         } as any
 
         // Attach process to session

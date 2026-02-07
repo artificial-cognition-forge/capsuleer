@@ -18,22 +18,24 @@ export function createShellSpawner(sessionMgr: SessionManager) {
             stderr: "pipe",
         }
 
+        let terminal: any = undefined
+        let bashCmd: string[]
+
         if (opts.pty) {
-            const terminal = new Bun.Terminal({
+            terminal = new Bun.Terminal({
                 cols: process.stdout.columns,
                 rows: process.stdout.rows,
                 data: (_term, data) => Bun.stdout.write(data),
             })
             spawnOpts.terminal = terminal
+            // Interactive bash shell for PTY attachment
+            bashCmd = ["bash", "-i"]
+        } else {
+            // Non-interactive command processor for RPC use
+            bashCmd = ["bash", "-c", "while IFS= read -r line; do echo \">> $line\" >&2; eval \"$line\"; done"]
         }
 
-        // Run bash as a command processor that reads from stdin and outputs to stdout
-        // This ensures proper stdout/stderr separation without TTY overhead
-        // Using cat to echo back the line, then eval to execute it
-        const subprocess = Bun.spawn(
-            ["bash", "-c", "while IFS= read -r line; do echo \">> $line\" >&2; eval \"$line\"; done"],
-            spawnOpts
-        )
+        const subprocess = Bun.spawn(bashCmd, spawnOpts)
 
         const capsuleProcess: CapsuleProcess = {
             id: randomUUIDv7(),
@@ -52,7 +54,7 @@ export function createShellSpawner(sessionMgr: SessionManager) {
             exitCode: subprocess.exitCode,
             signalDescription: subprocess.signalDescription,
             kill: subprocess.kill.bind(subprocess),
-            terminal: subprocess.terminal,
+            terminal: terminal || undefined,
         } as any;
 
         // Attach process to session

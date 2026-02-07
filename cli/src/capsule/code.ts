@@ -1,7 +1,3 @@
-type Input = {
-}
-
-
 type RunCodeOptions = {
     code: string
     context?: Record<string, any>
@@ -96,14 +92,6 @@ export async function runCodeInProcess({
             if (regex.test(code)) {
                 const errorMessage = `Forbidden pattern detected: ${regex.toString()}`
 
-                $agent.emit({
-                    type: "sandbox:error",
-                    errorType: "forbidden_pattern",
-                    errorMessage,
-                    codeSnippet: code.slice(0, 100),
-                    pattern: regex.toString()
-                })
-
                 return { error: errorMessage }
             }
         }
@@ -149,13 +137,6 @@ ${code}
                     timeoutId = setTimeout(() => {
                         const errorMessage = `Code execution timeout: exceeded ${timeoutMs}ms`
 
-                        $agent.emit({
-                            type: "sandbox:error",
-                            errorType: "timeout",
-                            errorMessage,
-                            codeSnippet: code.slice(0, 100)
-                        })
-
                         reject(new Error(errorMessage))
                     }, timeoutMs);
                 }),
@@ -166,16 +147,9 @@ ${code}
     } catch (err: any) {
         const errorMessage = err.message || String(err)
 
-        $agent.emit({
-            type: "sandbox:error",
-            errorType: "execution_error",
-            errorMessage,
-            codeSnippet: code.slice(0, 100)
-        })
-
         return { error: errorMessage };
     }
 }
 
 
-export type $codeT = ReturnType<typeof $codeConstructor>
+export type replT = ReturnType<typeof runCodeInProcess>

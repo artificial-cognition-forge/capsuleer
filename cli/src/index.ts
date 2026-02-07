@@ -32,6 +32,12 @@ export async function main() {
             process.exit(1)
         }
 
+        if (command === "attach") {
+            const connectionString = args[1] || "default"
+            await cli.daemon.capsules.attach(connectionString)
+            return
+        }
+
         if (command === "ls") {
             await cli.daemon.capsules.list()
             return

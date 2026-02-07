@@ -1,4 +1,4 @@
-import config from "cli/config";
+import config from "../../config"
 import type { CapsuleerEvent } from "../types/events";
 import { readdir, rm, mkdir, appendFile } from "node:fs/promises";
 import { join } from "node:path";

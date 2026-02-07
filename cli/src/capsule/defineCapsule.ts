@@ -3,6 +3,7 @@ import { createSessionManager, type CapsuleSession } from "./sessions"
 import { createShellSpawner } from "./spawn/shell"
 import { createReplSpawner } from "./spawn/repl"
 import { createAttachHandler } from "./attach"
+import { runCodeInProcess } from "./code"
 
 /**
  * The main Capsule blueprint type
@@ -75,6 +76,18 @@ export type CapsuleProcess = {
 } & Bun.Subprocess
 
 
+function repl(scope: Record<string, any>) {
+    return {
+        eval(code: string) {
+            return runCodeInProcess({
+                code: code,
+                context: scope,
+                timeoutMs: 10000,
+            })
+        }
+    }
+}
+
 /**
  * Capsule
  * 
@@ -93,6 +106,8 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
     const shellSpawner = createShellSpawner(sessionMgr)
     const replSpawner = createReplSpawner(sessionMgr)
     const attachHandler = createAttachHandler(sessionMgr)
+
+    const r = repl(blueprint.scope)
 
     const capsule = {
         blueprint: blueprint,
