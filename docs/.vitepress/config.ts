@@ -2,66 +2,51 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Capsuleer",
-  description: "Controlled remote execution for AI agents",
+  title: "@hexlabs/capsuleer",
+  description: "Runtime boundary system for controlled capabilities and sensory streams",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      // no nav items
+      { text: 'Home', link: '/' },
+      { text: 'Guide', link: '/concepts' },
+      { text: 'Examples', link: '/examples/minimal' }
     ],
 
     sidebar: [
       {
-        text: 'Getting Started',
+        text: 'Introduction',
         items: [
-          { text: "Overview", link: '/' },
-          { text: 'Installation', link: '/guide/installation' },
-          { text: 'Why', link: '/guide/why' },
+          { text: 'Overview', link: '/index' },
+          { text: 'Concepts', link: '/concepts' }
         ]
       },
       {
-        text: 'Daemon',
+        text: 'Core Abstractions',
         items: [
-          { text: 'Overview', link: '/daemon/overview' },
-          { text: 'Lifecycle', link: '/daemon/lifecycle' },
-          { text: 'Configuration', link: '/daemon/configuration' },
-          { text: "CLI", link: '/daemon/cli-reference.md' }
+          { text: 'Capsule', link: '/capsule' },
+          { text: 'Capabilities', link: '/capabilities' },
+          { text: 'Middleware', link: '/middleware' },
+          { text: 'Stimuli', link: '/stimuli' },
+          { text: 'Lifecycle', link: '/lifecycle' },
+          { text: 'Transports', link: '/transports' }
         ]
       },
       {
-        text: 'Capsules',
+        text: 'Reference',
         items: [
-          { text: 'Overview', link: '/capsule/overview' },
-          { text: 'Blueprint Anatomy', link: '/capsule/blueprint-anatomy' },
-          { text: 'Capability APIs', link: '/capsule/capability-apis' },
-          { text: 'Mediation Policies', link: '/capsule/mediation-policies' },
-          { text: 'Creating Capsules', link: '/capsule/creating-capsules' }
+          { text: 'Invariants', link: '/invariants' }
         ]
       },
       {
-        text: 'SDK Guide',
+        text: 'Examples',
         items: [
-          { text: 'Overview', link: '/sdk/overview' },
-          { text: 'Installation', link: '/sdk/installation' },
-          { text: 'Connecting', link: '/sdk/connecting' },
-          { text: 'Spawning Processes', link: '/sdk/spawning-processes' },
-          { text: 'Stream Handling', link: '/sdk/stream-handling' },
-          { text: 'Session Lifecycle', link: '/sdk/session-lifecycle' }
-        ]
-      },
-      {
-        text: 'API Reference',
-        items: [
-          { text: 'CLI Reference', link: '/api/cli' },
-          { text: 'SDK Types', link: '/api/sdk-types' },
-          { text: 'RPC Contract', link: '/api/rpc-contract' },
-          { text: 'Blueprint Spec', link: '/api/blueprint-spec' }
+          { text: 'Minimal Example', link: '/examples/minimal' }
         ]
       }
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/anthropics/capsuleer' }
+      { icon: 'github', link: 'https://github.com/hexlabs/capsuleer' }
     ]
   }
 })

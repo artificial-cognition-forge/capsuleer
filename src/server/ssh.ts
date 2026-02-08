@@ -66,7 +66,7 @@ export interface MinimalSSHConfig {
 	}) => Promise<void>
 }
 
-export async function createMinimalSSHServer(config: MinimalSSHConfig) {
+export async function createSSHServer(config: MinimalSSHConfig) {
 	const port = config.port ?? 2423
 	const host = config.host ?? "127.0.0.1"
 
