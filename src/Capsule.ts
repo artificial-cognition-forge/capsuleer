@@ -1,6 +1,6 @@
-import { trace } from "cli/src/capsuled/trace"
 import type { CapsuleState } from "./defineCapsule"
 import { buntime } from "./runtime/runtime"
+import { trace } from "./trace"
 
 /**
  * The main Capsule blueprint type

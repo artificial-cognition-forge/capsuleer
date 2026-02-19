@@ -1,5 +1,5 @@
 {
-  "name": "@arcforge/capsuleer-core",
+  "name": "@arcforge/capsuleer",
   "version": "0.0.3",
   "description": "Type-safe capability-based architecture for building modular systems",
   "type": "module",

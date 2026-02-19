@@ -1,7 +1,10 @@
-import { storage } from "../storage/storage"
-import type { CapsuleerEvent } from "../types/events"
-import { eventTimestamp } from "./utils/eventTimestamp"
-import { randomUUIDv7 } from "bun"
+
+function eventTimestamp() {
+    return {
+        ms: Date.now(),
+        seq: 0,
+    }
+}
 
 const log: CapsuleerEvent[] = []
 const callbacks = new Set<(event: CapsuleerEvent) => void>()
@@ -23,7 +26,7 @@ export function trace() {
         append(event: CapsuleerEvent, opts?: { instanceId?: string }) {
 
             const eventWithTime = {
-                eventId: randomUUIDv7(),
+                eventId: crypto.randomUUID(),
                 ...event,
                 time: eventTimestamp(),
             }
