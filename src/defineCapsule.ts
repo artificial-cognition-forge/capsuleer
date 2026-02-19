@@ -1,7 +1,5 @@
 import type { CapsuleBlueprint, DefineCapsuleInput } from "./Capsule"
 
-
-
 /**
  * The API: define a capsule blueprint
  */
@@ -16,6 +14,7 @@ export function defineCapsule(input: DefineCapsuleInput): CapsuleBlueprint {
         boot: input.boot || (() => Promise.resolve()),
         shutdown: input.shutdown || (() => Promise.resolve()),
         scope: [],
+        entrypoint: input.entrypoint,
     }
 }
 

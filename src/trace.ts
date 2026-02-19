@@ -6,14 +6,15 @@ function eventTimestamp() {
     }
 }
 
+type CapsuleerEvent = Record<string, unknown>
+
 const log: CapsuleerEvent[] = []
 const callbacks = new Set<(event: CapsuleerEvent) => void>()
 
 /**
  * Trace
  *
- * capsuleer daemon event log.
- * appends to jsonl log file
+ * capsuleer daemon event log (in-memory).
  */
 export type CapsuleerTrace = ReturnType<typeof trace>
 export function trace() {
@@ -23,8 +24,7 @@ export function trace() {
             return [...log]
         },
 
-        append(event: CapsuleerEvent, opts?: { instanceId?: string }) {
-
+        append(event: CapsuleerEvent) {
             const eventWithTime = {
                 eventId: crypto.randomUUID(),
                 ...event,
@@ -33,9 +33,6 @@ export function trace() {
 
             log.push(eventWithTime)
             callbacks.forEach(cb => cb(eventWithTime))
-
-            // Append to log.
-            storage.log.event(eventWithTime, opts)
         },
 
         onEvent: (cb: (event: CapsuleerEvent) => void) => {
@@ -43,4 +40,3 @@ export function trace() {
         },
     }
 }
-

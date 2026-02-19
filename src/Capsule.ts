@@ -6,12 +6,13 @@ import { trace } from "./trace"
  * The main Capsule blueprint type
  */
 export type CapsuleBlueprint = {
-    name: string                   // capsule name
+    name: string
     description?: string
     env: Record<string, string>
     boot: () => Promise<void>
     shutdown: () => Promise<void>
     scope: any
+    entrypoint?: string
 }
 
 export type DefineCapsuleInput = {
@@ -26,6 +27,9 @@ export type DefineCapsuleInput = {
 
     /** shutdown hook */
     shutdown?: () => Promise<void>
+
+    /** Absolute path to the bun environment entrypoint (required when running inside a bundler) */
+    entrypoint?: string
 }
 
 /**
@@ -40,7 +44,7 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
         started: false,
     }
 
-    const bun = await buntime()
+    const bun = await buntime({ entrypoint: blueprint.entrypoint })
 
     const capsule = {
         blueprint: blueprint,
