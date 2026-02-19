@@ -9,8 +9,15 @@ export async function setup() {
             const payload = JSON.parse(message)
 
             if (payload.type === "ts") {
-                const result = await eval(payload.code)
-                console.log(JSON.stringify({ ok: true, result }))
+                const logs: unknown[] = []
+                const origLog = console.log
+                console.log = (...args) => logs.push(args.length === 1 ? args[0] : args)
+                try {
+                    const result = await eval(payload.code)
+                    origLog(JSON.stringify({ ok: true, result: logs.length ? logs : result }))
+                } finally {
+                    console.log = origLog
+                }
             }
 
             if (payload.type === "shell") {
