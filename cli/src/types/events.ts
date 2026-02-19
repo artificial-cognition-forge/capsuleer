@@ -1,9 +1,8 @@
 export type CapsuleerEvent =
     | DaemonEvent
-    | SSHEvent
+    | WebsocketEvent
     | CapsuleEvent
     | CtlEvent
-    | RPCEvent
     | SDKClientEvent
     | LogEvent
 
@@ -19,7 +18,9 @@ type DaemonEvent =
     | { type: "daemon.stopped"; reason: "signal" | "crash" }
     | { type: "daemon.restarted"; previousPid: number }
 
-type SSHEvent =
+
+// Todo: change to new websocket events : ssh is deprecated here.
+type WebsocketEvent =
     | { type: "ssh.start"; port: number }
     | { type: "ssh.stop" }
     | { type: "ssh.connect"; host: string; user: string }
@@ -40,50 +41,6 @@ type CtlEvent =
     | { type: "ctl.uninstall.started"; platform: "linux" | "darwin" | "win32" }
     | { type: "ctl.uninstall.completed"; platform: "linux" | "darwin" | "win32"; path: string }
     | { type: "ctl.uninstall.failed"; platform: "linux" | "darwin" | "win32"; error: string }
-
-type RPCEvent =
-    // Handler lifecycle
-    | { type: "rpc.handler.started"; capsuleId?: string }
-    | { type: "rpc.handler.ready"; capsuleId?: string }
-    | { type: "rpc.handler.shutdown"; capsuleId?: string; reason?: string }
-
-    // Request/Response transport
-    | { type: "rpc.request.received"; id: number; method: string; paramKeys: string[] }
-    | { type: "rpc.request.dispatch"; id: number; method: string; capsuleId?: string; sessionId?: string }
-    | { type: "rpc.response.sent"; id: number; method: string; resultKeys?: string[]; error?: string }
-    | { type: "rpc.response.error"; id: number; method: string; code: string; message: string }
-    | { type: "rpc.request.timeout"; id: number; method: string; timeoutMs: number }
-
-    // Session management
-    | { type: "rpc.session.attach"; capsuleId: string; sessionId: string }
-    | { type: "rpc.session.attach.error"; capsuleId: string; error: string }
-    | { type: "rpc.session.detach"; capsuleId: string; sessionId: string; transportId: string }
-    | { type: "rpc.session.terminate"; capsuleId: string; sessionId: string }
-
-    // Process management
-    | { type: "rpc.process.spawn"; capsuleId: string; sessionId: string; processId: string; runtime: "shell" | "typescript" }
-    | { type: "rpc.process.spawn.error"; capsuleId: string; sessionId: string; error: string }
-    | { type: "rpc.process.exit"; capsuleId: string; sessionId: string; processId: string; code: number; signal?: string }
-    | { type: "rpc.process.error"; capsuleId: string; sessionId: string; processId: string; error: string }
-    | { type: "rpc.process.stdin"; capsuleId: string; sessionId: string; processId: string; bytes: number }
-    | { type: "rpc.process.stdin.error"; capsuleId: string; sessionId: string; processId: string; error: string }
-    | { type: "rpc.process.kill"; capsuleId: string; sessionId: string; processId: string; signal: string }
-    | { type: "rpc.process.kill.error"; capsuleId: string; sessionId: string; processId: string; error: string }
-
-    // Stream events
-    | { type: "rpc.stream.subscribe"; capsuleId: string; sessionId: string; processId: string }
-    | { type: "rpc.stream.data"; capsuleId: string; sessionId: string; processId: string; source: "stdout" | "stderr"; bytes: number }
-    | { type: "rpc.stream.exit"; capsuleId: string; sessionId: string; processId: string; code: number; signal?: string }
-    | { type: "rpc.stream.error"; capsuleId: string; sessionId: string; processId: string; source: "stdout" | "stderr" | "exit"; error: string }
-
-    // Event routing
-    | { type: "rpc.event.emit"; capsuleId: string; sessionId: string; eventType: string; transportCount: number }
-    | { type: "rpc.event.write"; capsuleId: string; sessionId: string; transportId: string; eventType: string; bytes: number }
-    | { type: "rpc.event.write.error"; capsuleId: string; sessionId: string; transportId: string; error: string }
-
-    // Debugging/diagnostics
-    | { type: "rpc.debug.line.received"; line: string }
-    | { type: "rpc.debug.parse.error"; line: string; error: string }
 
 type SDKClientEvent =
     // Connection lifecycle

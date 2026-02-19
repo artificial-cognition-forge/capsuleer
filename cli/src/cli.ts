@@ -17,14 +17,6 @@ export const cli = {
     /** Check daemon health. */
     health: daemon.health, // currntly broken
 
-    /** Manage local capsules. */
-    capsule: daemon.capsules,
-
-    ls: daemon.capsules.list,
-
-    /** RPC endpoint for programmatic client access */
-    rpc: daemon.rpc,
-
     /** Tail the capsuleer daemon log. */
     tail: tail,
 

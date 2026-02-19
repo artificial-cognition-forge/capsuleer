@@ -1,118 +1,75 @@
-import { exec } from "child_process"
-import { promisify } from "util"
+import { join } from "path"
+import { homedir } from "os"
 
-const execAsync = promisify(exec)
-
-export type SSHStatus = {
-    status: string
-    port: number
-    clients: number
-}
+const PID_FILE = join(homedir(), ".capsuleer", "daemon.pid")
+const WS_PORT = 3011
 
 export type CapsuleerDeamonStatus = {
     running: boolean
+    ws: { reachable: boolean; port: number }
     healthy: boolean
-    ssh: SSHStatus
 }
 
-/** Check if OpenSSH daemon is running via systemctl */
-async function isSSHDaemonRunning(): Promise<boolean> {
+/** Check if the daemon process is alive via pidfile */
+async function isDaemonRunning(): Promise<boolean> {
     try {
-        // Try 'ssh' first (common on Debian/Ubuntu), fall back to 'sshd' (RedHat/CentOS)
-        let result
-        try {
-            result = await execAsync("systemctl status ssh")
-        } catch {
-            result = await execAsync("systemctl status sshd")
+        const pid = parseInt(await Bun.file(PID_FILE).text())
+        if (isNaN(pid)) return false
+        process.kill(pid, 0)
+        return true
+    } catch {
+        return false
+    }
+}
+
+/** Check if the WS server is reachable */
+async function isWsReachable(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+            ws.close()
+            resolve(false)
+        }, 2000)
+
+        const ws = new WebSocket(`ws://localhost:${port}`)
+        ws.onopen = () => {
+            clearTimeout(timeout)
+            ws.close()
+            resolve(true)
         }
-
-        return result.stdout.includes("active (running)")
-    } catch {
-        // If systemctl fails, SSH daemon is not running
-        return false
-    }
+        ws.onerror = () => {
+            clearTimeout(timeout)
+            resolve(false)
+        }
+    })
 }
 
-/** Check if SSH is actually listening on port 22 */
-async function isSSHListening(): Promise<boolean> {
-    try {
-        const result = await execAsync("ss -tulpn | grep ':22'")
-        return result.stdout.includes("LISTEN")
-    } catch {
-        // If ss command fails or port not found, SSH not listening
-        return false
-    }
-}
-
-/** Format health status into human-readable output */
 function formatHealthOutput(status: CapsuleerDeamonStatus): string {
-    const checkmark = ""
-    const cross = ""
-    const tmuxStatus = status.running ? checkmark : cross
-    const sshServiceStatus = status.ssh.status === "running" ? checkmark : cross
-    const sshListeningStatus = status.ssh.status === "running" ? checkmark : cross
-    const capsuleSessionStatus = status.healthy ? checkmark : cross
-    const overallStatus = status.healthy ? `${checkmark} Healthy` : `${cross} Unhealthy`
+    const ok = (v: boolean) => v ? "✓" : "✗"
 
     return `
-Daemon Health Status
-
+Daemon Health
 
-Tmux Server
-  Status:  ${tmuxStatus} ${status.running ? "Running" : "Stopped"}
+  Process:  ${ok(status.running)} ${status.running ? "Running" : "Stopped"}
+  WS :${status.ws.port}  ${ok(status.ws.reachable)} ${status.ws.reachable ? "Reachable" : "Unreachable"}
 
-Capsuleer Session
-  Status:  ${capsuleSessionStatus} ${status.healthy ? "Active (capsuleerd_server)" : "Not found"}
-
-SSH Server
-  Service: ${sshServiceStatus} ${status.ssh.status === "running" ? "Running" : "Stopped"}
-  Port ${status.ssh.port}: ${sshListeningStatus} ${status.ssh.status === "running" ? "Listening" : "Not listening"}
-
-
-Overall: ${overallStatus}
+  Overall:  ${ok(status.healthy)} ${status.healthy ? "Healthy" : "Unhealthy"}
 `
 }
 
 /** Check the health of the Capsuleer daemon */
 export async function checkHealth(): Promise<CapsuleerDeamonStatus> {
-    try {
-        // Check if SSH daemon is running and listening
-        const sshDaemonRunning = await isSSHDaemonRunning()
-        const sshListening = sshDaemonRunning ? await isSSHListening() : false
+    const [running, wsReachable] = await Promise.all([
+        isDaemonRunning(),
+        isWsReachable(WS_PORT),
+    ])
 
-        // Tmux server is running if we can list sessions
-        // const sessions = await tmux.session.list()
-        // const tmuxRunning = sessions.length > 0
-
-        // Only check session if tmux is running
-        // const hasSession = tmuxRunning ? await tmux.session.has("capsuleerd_server") : false
-
-        const res = {
-            running: tmuxRunning && sshListening,
-            healthy: tmuxRunning && hasSession && sshListening,
-            ssh: {
-                status: sshListening ? "running" : "stopped",
-                port: 22,
-                clients: 0,
-            },
-        }
-
-        console.log(formatHealthOutput(res))
-
-        return res
-    } catch (error) {
-        // If we can't reach services, daemon is not running
-        const res = {
-            running: false,
-            healthy: false,
-            ssh: {
-                status: "unknown",
-                port: 0,
-                clients: 0,
-            },
-        }
-
-        console.log(formatHealthOutput(res))
-        return res
+    const status: CapsuleerDeamonStatus = {
+        running,
+        ws: { reachable: wsReachable, port: WS_PORT },
+        healthy: running && wsReachable,
     }
+
+    console.log(formatHealthOutput(status))
+
+    return status
 }

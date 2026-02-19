@@ -1,28 +1,32 @@
 import { storage } from "../storage/storage"
-import { writeAuthorizedKeysFile } from "../storage/keys"
-import { CapsuleManager } from "./capsule-manager"
 import { trace } from "./trace"
 import { randomUUIDv7, spawn } from "bun"
-import { homedir } from "os"
 import { join } from "path"
 import { checkHealth, type CapsuleerDeamonStatus } from "../commands/health"
 import type { CapsuleerEvent } from "../types/events"
 import { daemonInstanceId } from "./utils/daemonInstanceId"
-import { createRPCSessionRegistry } from "./rpcSessions"
-import { handleRPCStdio } from "./rpcStdio"
+import { CapsuleerWebsocket } from "../transport/ws"
+import { Capsule, defineCapsule } from "capsule/defineCapsule"
+
+const capsuleBlueprint = defineCapsule({
+    name: "default",
+})
 
 /** Capsuleer Daemon */
 export const daemon = {
+    capsule: await Capsule(capsuleBlueprint),
+
     /** Capsuleer Daemon runtime. (blocking - for systemd/launchd) */
     async runtime() {
         const daemonInstanceId = randomUUIDv7()
         process.env.CAPSULEER_DAEMON_INSTANCE_ID = daemonInstanceId
 
         const log = trace()
-        const manager = await CapsuleManager()
+        await daemon.capsule.boot()
 
-        // Set capsule manager on RPC session registry
-        daemon.sessions.setCapsuleManager(manager)
+        // boot WS server
+        const ws = CapsuleerWebsocket(daemon.capsule)
+        await ws.boot()
 
         // emit startup event
         log.append({
@@ -34,15 +38,13 @@ export const daemon = {
         await daemon.install()
 
         // Write capsuleer authorized keys to SSH's authorized_keys file
-        const sshKeysPath = join(homedir(), ".ssh", "authorized_keys")
-        writeAuthorizedKeysFile(sshKeysPath)
-
-        // start all capsules
-        await manager.start()
+        // const sshKeysPath = join(homedir(), ".ssh", "authorized_keys")
+        // writeAuthorizedKeysFile(sshKeysPath)
 
         // The SSH server continues handling requests in the background
         // Block forever until signal (Ctrl+C or systemd stop)
         const handleShutdown = async () => {
+            await ws.shutdown()
             await daemon.down()
             process.exit(0)
         }
@@ -76,7 +78,7 @@ export const daemon = {
         const stopScript = join(scriptsDir, "daemon/stop.sh")
         const instanceId = daemonInstanceId
 
-        await daemon.capsules.stop()
+        await daemon.capsule.shutdown()
 
         // Spawn the daemon in background
         spawn({
@@ -99,7 +101,7 @@ export const daemon = {
     /** Emit an event to the daemon log. */
     async emit(event: CapsuleerEvent) {
         const t = trace()
-        await t.append(event)
+        t.append(event)
     },
 
     /** Get the current status of the Capsuleer Deamon */
@@ -107,29 +109,6 @@ export const daemon = {
         return await checkHealth()
     },
 
-    capsules: await CapsuleManager(),
-
-    // RPC Session Registry - manages all RPC sessions at daemon level
-    sessions: createRPCSessionRegistry(),
-
-    /**
-     * Remote Procedure Call
-     *
-     * for machine use of the capsuleer cli
-     */
-    rpc: {
-        /**
-         * Capsuleer RPC
-         *
-         * Full control over the capsuleer cli over SSH.
-         *
-         * Runs in an SSH exec channel, reads JSON-L RPC requests from stdin,
-         * and writes JSON-L responses + events to stdout.
-         */
-        async stdio() {
-            return await handleRPCStdio(daemon.sessions)
-        }
-    },
 
     /** Write ctl script to disk */
     install: storage.capsuled.install,
