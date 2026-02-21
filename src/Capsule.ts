@@ -46,27 +46,12 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
 
     const bun = await buntime({ entrypoint: blueprint.entrypoint })
 
-    // Wire up event listener to push all buntime events to trace
-    const t = trace()
-    bun.onEvent((event) => {
-        t.append({
-            type: "capsule.event",
-            capsuleId: blueprint.name,
-            ...event,
-        })
-    })
-
     const capsule = {
         blueprint: blueprint,
 
         /** Boot the capsule */
         async boot() {
             if (state.started) return
-
-            t.append({
-                type: "capsule.boot",
-                capsuleId: blueprint.name,
-            })
 
             state.started = true
         },
@@ -79,11 +64,6 @@ export async function Capsule(blueprint: CapsuleBlueprint) {
             if (!state.started) return
 
             bun.proc.kill("SIGKILL")
-
-            t.append({
-                type: "capsule.shutdown",
-                capsuleId: blueprint.name,
-            })
 
             state.started = false
         },

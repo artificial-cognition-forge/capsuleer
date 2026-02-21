@@ -29,18 +29,18 @@ function serializeValue(value: unknown): unknown {
     return value
 }
 
-type BuntimeEvent =
-    | { id: string; event: "start" }
-    | { id: string; event: "stdin"; data: string }
-    | { id: string; event: "stdout"; data: unknown }
-    | { id: string; event: "stderr"; data: string }
-    | { id: string; event: "exit"; ok: true; result: unknown }
-    | { id: string; event: "error"; ok: false; error: string }
+export type CapsuleerRuntimeEvent =
+    | { id: string; type: "start" }
+    | { id: string; type: "stdin"; data: string }
+    | { id: string; type: "stdout"; data: unknown }
+    | { id: string; type: "stderr"; data: string }
+    | { id: string; type: "exit"; ok: true; result: unknown }
+    | { id: string; type: "error"; ok: false; error: string }
 
 // Save the original console.log at module level before any interception
 const originalLog = console.log
 
-function emitEvent(event: BuntimeEvent) {
+function emitEvent(event: CapsuleerRuntimeEvent) {
     originalLog(JSON.stringify(event))
     process.stdout.write("") // Flush
 }
@@ -69,8 +69,8 @@ export async function setup() {
                 }
 
                 if (stream) {
-                    emitEvent({ id, event: "start" })
-                    emitEvent({ id, event: "stdin", data: code })
+                    emitEvent({ id, type: "start" })
+                    emitEvent({ id, type: "stdin", data: code })
                 }
 
                 if (type === "ts") {
@@ -81,7 +81,7 @@ export async function setup() {
                         console.log = (...args) => {
                             const data = args.length === 1 ? args[0] : args
                             logs.push(data)
-                            emitEvent({ id, event: "stdout", data: serializeValue(data) })
+                            emitEvent({ id, type: "stdout", data: serializeValue(data) })
                         }
                     } else {
                         console.log = (...args) => logs.push(args.length === 1 ? args[0] : args)
@@ -89,21 +89,21 @@ export async function setup() {
 
                     try {
                         // Create an async function with access to globals
-                        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor
+                        const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor
                         const fn = new AsyncFunction(code)
                         const result = await fn.call(global)
 
                         const serializedResult = serializeValue(logs.length ? logs : result)
 
                         if (stream) {
-                            emitEvent({ id, event: "exit", ok: true, result: serializedResult })
+                            emitEvent({ id, type: "exit", ok: true, result: serializedResult })
                         } else {
                             originalLog(JSON.stringify({ id, ok: true, result: serializedResult }))
                             process.stdout.write("")
                         }
                     } catch (err) {
                         if (stream) {
-                            emitEvent({ id, event: "error", ok: false, error: String(err) })
+                            emitEvent({ id, type: "error", ok: false, error: String(err) })
                         } else {
                             originalLog(JSON.stringify({ id, ok: false, error: String(err) }))
                             process.stdout.write("")
@@ -119,14 +119,14 @@ export async function setup() {
                         const output = result.text()
 
                         if (stream) {
-                            emitEvent({ id, event: "exit", ok: true, result: output })
+                            emitEvent({ id, type: "exit", ok: true, result: output })
                         } else {
                             console.log(JSON.stringify({ id, ok: true, result: output }))
                             process.stdout.write("")
                         }
                     } catch (err) {
                         if (stream) {
-                            emitEvent({ id, event: "error", ok: false, error: String(err) })
+                            emitEvent({ id, type: "error", ok: false, error: String(err) })
                         } else {
                             console.log(JSON.stringify({ id, ok: false, error: String(err) }))
                             process.stdout.write("")
@@ -154,13 +154,13 @@ export async function loadModules() {
             }
         }
 
-        // Register module namespace (e.g., global.fs = { ... })
-        ;(global as any)[mod.default.name] = mod.default.api
+            // Register module namespace (e.g., global.fs = { ... })
+            ; (global as any)[mod.default.name] = mod.default.api
 
         // Register individual globals if specified (e.g., global.$ = ...)
         if (mod.default.globals) {
             for (const [key, value] of Object.entries(mod.default.globals)) {
-                ;(global as any)[key] = value
+                ; (global as any)[key] = value
             }
         }
     }

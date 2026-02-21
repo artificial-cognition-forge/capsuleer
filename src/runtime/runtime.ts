@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
+import type { CapsuleerRuntimeEvent } from "./environment/setup"
 
 type BuntimeOpts = {
     cwd?: string
@@ -10,14 +11,6 @@ type BuntimeOpts = {
 
 export type BuntimeCommand =
     | { id: string; type: "ts" | "shell"; code: string; stream?: boolean }
-
-export type BuntimeEvent =
-    | { id: string; event: "start" }
-    | { id: string; event: "stdin"; data: string }
-    | { id: string; event: "stdout"; data: unknown }
-    | { id: string; event: "stderr"; data: string }
-    | { id: string; event: "exit"; ok: true; result: unknown }
-    | { id: string; event: "error"; ok: false; error: string }
 
 /** Default entrypoint - only correct when not bundled (i.e. running under Bun directly) */
 const DEFAULT_ENTRYPOINT = new URL("./environment/index.ts", import.meta.url).pathname
@@ -41,7 +34,7 @@ export async function buntime(opts: BuntimeOpts = {}) {
     proc.stdout.setEncoding("utf8")
 
     // Event listeners registry - weak so they can be garbage collected
-    const eventListeners = new Set<(event: BuntimeEvent) => void>()
+    const eventListeners = new Set<(event: CapsuleerRuntimeEvent) => void>()
 
     // Buffer for incomplete JSONL lines
     let stdoutBuffer = ""
@@ -59,8 +52,7 @@ export async function buntime(opts: BuntimeOpts = {}) {
             if (!line.trim()) continue // Skip empty lines
 
             try {
-                const event = JSON.parse(line) as BuntimeEvent
-                // Emit to all registered listeners
+                const event = JSON.parse(line) as CapsuleerRuntimeEvent
                 for (const listener of eventListeners) {
                     listener(event)
                 }
@@ -98,7 +90,7 @@ export async function buntime(opts: BuntimeOpts = {}) {
          * Subscribe to events from the subprocess.
          * Returns an unsubscribe function.
          */
-        onEvent(listener: (event: BuntimeEvent) => void): () => void {
+        onEvent(listener: (event: CapsuleerRuntimeEvent) => void): () => void {
             eventListeners.add(listener)
             return () => eventListeners.delete(listener)
         },
