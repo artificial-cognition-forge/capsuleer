@@ -29,6 +29,22 @@ function serializeValue(value: unknown): unknown {
     return value
 }
 
+type BuntimeEvent =
+    | { id: string; event: "start" }
+    | { id: string; event: "stdin"; data: string }
+    | { id: string; event: "stdout"; data: unknown }
+    | { id: string; event: "stderr"; data: string }
+    | { id: string; event: "exit"; ok: true; result: unknown }
+    | { id: string; event: "error"; ok: false; error: string }
+
+// Save the original console.log at module level before any interception
+const originalLog = console.log
+
+function emitEvent(event: BuntimeEvent) {
+    originalLog(JSON.stringify(event))
+    process.stdout.write("") // Flush
+}
+
 export async function setup() {
     let buffer = ""
 
@@ -45,33 +61,77 @@ export async function setup() {
 
             try {
                 const payload = JSON.parse(line)
+                const { id, type, code, stream = true } = payload
 
-                if (payload.type === "ts") {
+                if (!id) {
+                    console.error(JSON.stringify({ ok: false, error: "Missing command ID" }))
+                    continue
+                }
+
+                if (stream) {
+                    emitEvent({ id, event: "start" })
+                    emitEvent({ id, event: "stdin", data: code })
+                }
+
+                if (type === "ts") {
                     const logs: unknown[] = []
-                    const origLog = console.log
-                    console.log = (...args) => logs.push(args.length === 1 ? args[0] : args)
+
+                    // Capture console.log calls if streaming
+                    if (stream) {
+                        console.log = (...args) => {
+                            const data = args.length === 1 ? args[0] : args
+                            logs.push(data)
+                            emitEvent({ id, event: "stdout", data: serializeValue(data) })
+                        }
+                    } else {
+                        console.log = (...args) => logs.push(args.length === 1 ? args[0] : args)
+                    }
+
                     try {
                         // Create an async function with access to globals
-                        // This ensures that all global variables (like $, file, write, fs) are accessible
                         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor
-                        const fn = new AsyncFunction(payload.code)
+                        const fn = new AsyncFunction(code)
                         const result = await fn.call(global)
 
-                        // Serialize result, converting Buffers to strings
                         const serializedResult = serializeValue(logs.length ? logs : result)
-                        origLog(JSON.stringify({ ok: true, result: serializedResult }))
-                        // Flush stdout to ensure output is sent immediately
-                        process.stdout.write("")
+
+                        if (stream) {
+                            emitEvent({ id, event: "exit", ok: true, result: serializedResult })
+                        } else {
+                            originalLog(JSON.stringify({ id, ok: true, result: serializedResult }))
+                            process.stdout.write("")
+                        }
+                    } catch (err) {
+                        if (stream) {
+                            emitEvent({ id, event: "error", ok: false, error: String(err) })
+                        } else {
+                            originalLog(JSON.stringify({ id, ok: false, error: String(err) }))
+                            process.stdout.write("")
+                        }
                     } finally {
-                        console.log = origLog
+                        console.log = originalLog
                     }
                 }
 
-                if (payload.type === "shell") {
-                    const result = await $`${{ raw: payload.command }}`.quiet()
-                    console.log(JSON.stringify({ ok: true, result: result.text() }))
-                    // Flush stdout to ensure output is sent immediately
-                    process.stdout.write("")
+                if (type === "shell") {
+                    try {
+                        const result = await $`${{ raw: code }}`.quiet()
+                        const output = result.text()
+
+                        if (stream) {
+                            emitEvent({ id, event: "exit", ok: true, result: output })
+                        } else {
+                            console.log(JSON.stringify({ id, ok: true, result: output }))
+                            process.stdout.write("")
+                        }
+                    } catch (err) {
+                        if (stream) {
+                            emitEvent({ id, event: "error", ok: false, error: String(err) })
+                        } else {
+                            console.log(JSON.stringify({ id, ok: false, error: String(err) }))
+                            process.stdout.write("")
+                        }
+                    }
                 }
 
             } catch (err) {

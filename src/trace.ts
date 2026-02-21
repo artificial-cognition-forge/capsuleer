@@ -37,6 +37,7 @@ export function trace() {
 
         onEvent: (cb: (event: CapsuleerEvent) => void) => {
             callbacks.add(cb)
+            return () => callbacks.delete(cb)
         },
     }
 }

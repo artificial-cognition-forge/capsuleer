@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process"
+import { randomUUID } from "node:crypto"
 
 type BuntimeOpts = {
     cwd?: string
@@ -8,8 +9,15 @@ type BuntimeOpts = {
 }
 
 export type BuntimeCommand =
-    | { type: "ts"; code: string }
-    | { type: "shell"; command: string }
+    | { id: string; type: "ts" | "shell"; code: string; stream?: boolean }
+
+export type BuntimeEvent =
+    | { id: string; event: "start" }
+    | { id: string; event: "stdin"; data: string }
+    | { id: string; event: "stdout"; data: unknown }
+    | { id: string; event: "stderr"; data: string }
+    | { id: string; event: "exit"; ok: true; result: unknown }
+    | { id: string; event: "error"; ok: false; error: string }
 
 /** Default entrypoint - only correct when not bundled (i.e. running under Bun directly) */
 const DEFAULT_ENTRYPOINT = new URL("./environment/index.ts", import.meta.url).pathname
@@ -32,16 +40,67 @@ export async function buntime(opts: BuntimeOpts = {}) {
     // Keep process alive - unref allows parent to exit but proc keeps running
     proc.stdout.setEncoding("utf8")
 
+    // Event listeners registry - weak so they can be garbage collected
+    const eventListeners = new Set<(event: BuntimeEvent) => void>()
+
+    // Buffer for incomplete JSONL lines
+    let stdoutBuffer = ""
+
+    // Parse JSONL output from the subprocess
+    proc.stdout.on("data", (chunk: string) => {
+        stdoutBuffer += chunk
+
+        // Process all complete lines (separated by newlines)
+        const lines = stdoutBuffer.split("\n")
+        // Keep the last incomplete line in the buffer
+        stdoutBuffer = lines.pop() || ""
+
+        for (const line of lines) {
+            if (!line.trim()) continue // Skip empty lines
+
+            try {
+                const event = JSON.parse(line) as BuntimeEvent
+                // Emit to all registered listeners
+                for (const listener of eventListeners) {
+                    listener(event)
+                }
+            } catch (err) {
+                console.error("[buntime] Failed to parse JSONL:", line, err)
+            }
+        }
+    })
+
+    proc.stderr.on("data", (chunk: string) => {
+        console.error("[buntime stderr]", chunk.toString())
+    })
+
     return {
         proc,
 
-        async command(command: BuntimeCommand) {
+        async command(cmd: Omit<BuntimeCommand, "id" | "stream"> & { stream?: boolean }) {
+            const command: BuntimeCommand = {
+                id: randomUUID(),
+                stream: cmd.stream ?? true,
+                ...cmd,
+            }
+
             await new Promise<void>((resolve, reject) => {
                 proc.stdin.write(JSON.stringify(command) + "\n", (err) => {
                     if (err) reject(err)
                     else resolve()
                 })
             })
+
+            return command.id
+        },
+
+        /**
+         * Subscribe to events from the subprocess.
+         * Returns an unsubscribe function.
+         */
+        onEvent(listener: (event: BuntimeEvent) => void): () => void {
+            eventListeners.add(listener)
+            return () => eventListeners.delete(listener)
         },
     }
 }
