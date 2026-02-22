@@ -81,7 +81,7 @@ export async function repl() {
                             displayWelcome(manifests)
                             startREPL()
                         }
-                    }, 500) // Wait 500ms after last manifest before starting REPL
+                    }, 50) // Wait 500ms after last manifest before starting REPL
 
                     continue
                 }
