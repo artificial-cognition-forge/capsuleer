@@ -1,19 +1,21 @@
 import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import type { CapsuleerRuntimeEvent } from "./environment/setup"
 
 type BuntimeOpts = {
     cwd?: string
     env?: Record<string, string>
-    /** Absolute path to the environment entrypoint. Defaults to bundled environment/index.ts */
+    /** Absolute path to the environment entrypoint. Defaults to installed environment at ~/.capsuleer/environment/index.ts */
     entrypoint?: string
 }
 
 export type BuntimeCommand =
     | { id: string; type: "ts" | "shell"; code: string; stream?: boolean }
 
-/** Default entrypoint - only correct when not bundled (i.e. running under Bun directly) */
-const DEFAULT_ENTRYPOINT = new URL("./environment/index.ts", import.meta.url).pathname
+/** Default entrypoint - points to user's installed environment */
+const DEFAULT_ENTRYPOINT = join(homedir(), ".capsuleer", "environment", "index.ts")
 
 /**
  * Capsuleer Buntime

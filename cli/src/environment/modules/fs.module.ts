@@ -131,6 +131,5 @@ declare global {
 export default defineModule({
     name: "fs",
     description: "Filesystem operations for reading, writing, and searching files",
-    jsdoc: "type GrepMatch = { file: string; line: number; text: string; match: string }; declare const fs: { cwd(): string; cd(path: string): void; read(path: string): Promise<string>; write(path: string, content: string): Promise<void>; list(path?: string): Promise<string[]>; exists(path: string): Promise<boolean>; delete(path: string): Promise<void>; find(pattern: string, opts?: { cwd?: string }): Promise<string[]>; grep(pattern: string, path?: string, opts?: { cwd?: string; recursive?: boolean }): Promise<GrepMatch[]>; help(): void }",
     api: fs
 })

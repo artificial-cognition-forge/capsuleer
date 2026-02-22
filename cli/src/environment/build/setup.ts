@@ -1,5 +1,6 @@
 import { $ } from "bun"
 import { readdirSync } from "node:fs"
+import { generateAllManifests, type ModuleManifest } from "./generateManifests"
 
 /**
  * Recursively serialize values, converting Buffers to strings.
@@ -146,7 +147,19 @@ export async function setup() {
 }
 
 export async function loadModules() {
-    const dir = new URL("./modules", import.meta.url).pathname
+    // Generate and emit manifests for all modules
+    const manifests = generateAllManifests()
+    for (const manifest of manifests) {
+        originalLog(JSON.stringify({
+            type: "module:manifest",
+            module: manifest.moduleName,
+            description: manifest.description,
+            exports: manifest.exports
+        }))
+        process.stdout.write("") // Flush
+    }
+
+    const dir = new URL("../modules", import.meta.url).pathname
     const files = readdirSync(dir).filter(f => f.endsWith(".module.ts"))
 
     for (const file of files) {

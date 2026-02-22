@@ -197,7 +197,6 @@ console.log(user.name) // Fully typed!
 export default defineModule({
     name: "fetch",
     description: "HTTP client with auto-parsing and simple API",
-    jsdoc: "declare function $fetch<T = any>(url: string, options?: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'; query?: Record<string, string | number | boolean>; params?: Record<string, string | number | boolean>; body?: any; headers?: HeadersInit; timeout?: number; responseType?: 'json' | 'text' | 'blob' | 'arrayBuffer'; onRequest?: (ctx: { request: string; options: any }) => void | Promise<void>; onResponse?: (ctx: { response: Response }) => void | Promise<void> }): Promise<T>",
     api: fetchHelpers,
     globals: {
         $fetch

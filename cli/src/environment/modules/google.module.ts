@@ -180,6 +180,5 @@ console.log(firstResult.content)
 export default defineModule({
     name: "google",
     description: "Web search and content fetching powered by Google Custom Search",
-    jsdoc: "declare const google: { search(input: string | { query: string; limit?: number; recencyDays?: number; type?: 'web' | 'news' }): Promise<{ query: string; results: Array<{ title: string; url: string; snippet: string; source?: string; date?: string }> }>; fetch(url: string): Promise<{ url: string; content: string }>; help(): void }",
     api: google,
 })
