@@ -7,6 +7,11 @@ USAGE:
   capsuleer <command> [subcommand] [options]
 
 COMMANDS:
+  repl                     Start an interactive TypeScript REPL
+                           - Direct access to capsule environment
+                           - Auto-discovery of available modules
+                           - Real-time code execution
+
   daemon                   Manage the capsuleer daemon
     start                  Start the daemon (boots capsule + SSH server)
     stop                   Stop the daemon
@@ -31,6 +36,9 @@ COMMANDS:
                            - user: SSH username (optional)
 
 EXAMPLES:
+  # Start an interactive REPL
+  capsuleer repl
+
   # Register an SSH public key
   capsuleer auth add ~/.ssh/id_rsa.pub
 

@@ -1,5 +1,5 @@
 import ts from "typescript"
-import { readFileSync, readdirSync } from "node:fs"
+import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from "node:fs"
 import { join } from "node:path"
 
 export type ManifestEntry = {
@@ -115,8 +115,11 @@ function extractModuleManifest(filePath: string): ModuleManifest | null {
     const compilerOptions: ts.CompilerOptions = {
         target: ts.ScriptTarget.Latest,
         module: ts.ModuleKind.ESNext,
-        strict: true,
+        strict: false,
         skipLibCheck: true,
+        skipDefaultLibCheck: true,
+        noResolve: true, // Don't resolve imports - we only need local types
+        noLib: true, // Don't include default lib
         moduleResolution: ts.ModuleResolutionKind.Node10
     }
 
@@ -217,12 +220,50 @@ function extractModuleManifest(filePath: string): ModuleManifest | null {
 }
 
 /**
+ * Check if cached manifests are valid (files haven't changed)
+ */
+function isCacheValid(cacheFile: string, moduleFiles: string[]): boolean {
+    if (!existsSync(cacheFile)) return false
+
+    try {
+        const cacheStats = statSync(cacheFile)
+        const cacheMtime = cacheStats.mtimeMs
+
+        // Check if any module file is newer than cache
+        for (const file of moduleFiles) {
+            const fileMtime = statSync(file).mtimeMs
+            if (fileMtime > cacheMtime) {
+                return false
+            }
+        }
+
+        return true
+    } catch {
+        return false
+    }
+}
+
+/**
  * Generate manifests for all module files in the modules directory
+ * Uses caching to avoid regenerating on every boot
  */
 export function generateAllManifests(): ModuleManifest[] {
     const modulesDir = new URL("../modules", import.meta.url).pathname
+    const cacheFile = join(modulesDir, ".manifests.cache.json")
     const files = readdirSync(modulesDir).filter(f => f.endsWith(".module.ts"))
+    const filePaths = files.map(f => join(modulesDir, f))
 
+    // Try to load from cache
+    if (isCacheValid(cacheFile, filePaths)) {
+        try {
+            const cached = JSON.parse(readFileSync(cacheFile, "utf-8"))
+            return cached as ModuleManifest[]
+        } catch {
+            // Cache read failed, regenerate
+        }
+    }
+
+    // Generate manifests
     const manifests: ModuleManifest[] = []
 
     for (const file of files) {
@@ -235,6 +276,13 @@ export function generateAllManifests(): ModuleManifest[] {
         } catch (error) {
             console.error(`Error generating manifest for ${file}:`, error)
         }
+    }
+
+    // Save to cache
+    try {
+        writeFileSync(cacheFile, JSON.stringify(manifests, null, 2), "utf-8")
+    } catch (error) {
+        // Cache write failed, not critical
     }
 
     return manifests

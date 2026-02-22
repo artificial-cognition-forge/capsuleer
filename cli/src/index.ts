@@ -24,6 +24,10 @@ export async function main() {
             process.exit(1)
         }
 
+        if (command === "repl") {
+            return await cli.repl()
+        }
+
         if (command === "help") {
             return await cli.help()
         }
