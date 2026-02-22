@@ -1,10 +1,10 @@
 {
   "name": "@arcforge/capsuleer",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Capsule environment manager - install and manage capability-based runtime environments",
   "type": "module",
   "bin": {
-    "capsuleer": "./bin/capsuleer.ts"
+    "capsuleer": "bin/capsuleer.ts"
   },
   "files": [
     "bin",
