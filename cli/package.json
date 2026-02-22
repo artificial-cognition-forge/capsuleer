@@ -1,14 +1,47 @@
 {
   "name": "@arcforge/capsuleer",
-  "version": "0.0.1",
-  "description": "CLI for capsuleer - capability-based architecture tooling",
+  "version": "0.1.0",
+  "description": "Capsule environment manager - install and manage capability-based runtime environments",
   "type": "module",
   "bin": {
     "capsuleer": "./bin/capsuleer.ts"
   },
-  "scripts": {},
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepublishOnly": "echo 'Ready to publish'"
+  },
+  "keywords": [
+    "capsule",
+    "capsuleer",
+    "capability",
+    "runtime",
+    "environment",
+    "cli",
+    "bun"
+  ],
+  "author": "Arc Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arclabs/capsuleer.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/arclabs/capsuleer/issues"
+  },
+  "homepage": "https://github.com/arclabs/capsuleer#readme",
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
-  "dependencies": {}
+  "dependencies": {
+    "chalk": "^5.6.2"
+  }
 }

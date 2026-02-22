@@ -76,6 +76,7 @@ export async function buntime(opts: BuntimeOpts = {}) {
                 ...cmd,
             }
 
+
             await new Promise<void>((resolve, reject) => {
                 proc.stdin.write(JSON.stringify(command) + "\n", (err) => {
                     if (err) reject(err)

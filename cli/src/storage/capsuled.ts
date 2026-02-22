@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
-import { trace } from '../capsuled/trace'
+import { trace } from 'src/trace'
 
 /** capsuled storage - systemd/launchd service file installation */
 export const capsuled = {

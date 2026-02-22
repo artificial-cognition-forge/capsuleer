@@ -5,96 +5,29 @@ export async function main() {
     const [command, subcommand] = args
 
     try {
-        // Top-level commands
-        if (command === "daemon") {
-            if (subcommand === "runtime") {
-                await cli.daemon.runtime()
-                return
-            }
+        if (command === "install") {
+            await cli.capsule.install()
+            return
+        }
 
-            if (subcommand === "health") {
-                return await cli.daemon.health()
-            }
+        if (command === "uninstall") {
+            await cli.capsule.uninstall()
+            return
+        }
 
-            if (subcommand === "restart") {
-                const shouldTrace = args.includes("--trace")
-                await cli.daemon.restart({ trace: shouldTrace })
-                if (shouldTrace) {
-                    await cli.tail.run()
-                }
+        if (command === "module") {
+            if (subcommand === "list") {
+                await cli.capsule.module.list()
                 return
             }
-            if (subcommand === "install") {
-                await cli.daemon.install()
-                return
-            }
-            console.error("daemon requires a subcommand: start, stop, restart, install")
+            console.error("module requires a subcommand: list")
             process.exit(1)
-        }
-
-        if (command === "attach") {
-            const connectionString = args[1] || "default"
-            await cli.daemon.capsules.attach(connectionString)
-            return
-        }
-
-        if (command === "ls") {
-            await cli.daemon.capsules.list()
-            return
-        }
-
-        if (command === "restart") {
-            const shouldTrace = args.includes("--trace")
-            await cli.daemon.restart({ trace: shouldTrace })
-            if (shouldTrace) {
-                await cli.tail.run()
-            }
-            return
-        }
-
-        if (command === "health") {
-            await cli.health()
-            return
-        }
-
-        if (command === "start") {
-            await cli.daemon.runtime()
-            return
-        }
-
-        if (command === "up") {
-            await cli.up()
-            return
-        }
-
-        if (command === "down") {
-            await cli.down()
-            return
-        }
-
-        // RPC endpoint for client SDK access
-        if (command === "rpc") {
-            if (subcommand === "stdio") {
-                await cli.rpc.stdio()
-                return
-            }
-            console.error("rpc requires a subcommand: stdio")
-            process.exit(1)
-        }
-
-        if (command === "tail") {
-            await cli.tail.run()
-            return
         }
 
         if (command === "help") {
-            await cli.help()
-            return
+            return await cli.help()
         }
 
-        // Unknown command
-        console.error(`Unknown command: ${command}`)
-        await cli.help()
         process.exit(1)
     } catch (error) {
         console.error("Error:", error)
