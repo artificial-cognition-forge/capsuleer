@@ -62,7 +62,8 @@ export async function setup() {
 
             try {
                 const payload = JSON.parse(line)
-                const { id, type, code, stream = true } = payload
+
+                const { id, type, code, stream = true, cwd = "/home/cody/git/playground/" } = payload // TODO: remove this hardcoded path
 
                 if (!id) {
                     console.error(JSON.stringify({ ok: false, error: "Missing command ID" }))
@@ -91,7 +92,9 @@ export async function setup() {
                     try {
                         // Transpile TypeScript to JavaScript to strip type annotations
                         const transpiler = new Bun.Transpiler({ loader: "ts" })
-                        const jsCode = transpiler.transformSync(code)
+                        const jsCodeRaw = transpiler.transformSync(code)
+                        const jsCode = `await fs.cd(${cwd});\n${jsCodeRaw}`
+
 
                         // Create an async function with access to globals
                         const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor

@@ -1,7 +1,7 @@
 import { $ as bunShell, file as bunFile, write as bunWrite } from "bun"
 import { defineModule } from "../build/defineModule"
 
-bunShell.cwd("/home/cody/git/")
+// bunShell.cwd("/home/cody/git/")
 const bun = {
   /**
    * Execute shell commands using Bun's shell template tag.
