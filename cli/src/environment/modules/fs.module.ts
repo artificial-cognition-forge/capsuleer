@@ -49,15 +49,20 @@ const fs = {
     async read(path: string): Promise<string> {
         try {
             const content = await readFile(path, "utf8")
-            console.log(JSON.stringify({
+
+            const payload = {
                 ok: true,
                 op: "fs.read",
                 data: {
                     path,
                     bytes: Buffer.byteLength(content),
-                    lines: content.split("\n").length
+                    lines: content.split("\n").length,
+                    encoding: "utf8",
+                    content
                 }
-            }))
+            }
+
+            console.log(JSON.stringify(payload))
             return content
         } catch (err: any) {
             console.log(JSON.stringify({

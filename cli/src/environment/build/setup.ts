@@ -93,7 +93,7 @@ export async function setup() {
                         // Transpile TypeScript to JavaScript to strip type annotations
                         const transpiler = new Bun.Transpiler({ loader: "ts" })
                         const jsCodeRaw = transpiler.transformSync(code)
-                        const jsCode = `await fs.cd(${cwd});\n${jsCodeRaw}`
+                        const jsCode = `await fs.cd("${cwd}");\n${jsCodeRaw}`
 
 
                         // Create an async function with access to globals
