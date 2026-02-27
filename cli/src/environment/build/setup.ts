@@ -63,7 +63,9 @@ export async function setup() {
             try {
                 const payload = JSON.parse(line)
 
-                const { id, type, code, stream = true, cwd = "/home/cody/git/playground/" } = payload // TODO: remove this hardcoded path
+                const { id, type, code, stream = true, } = payload // TODO: remove this hardcoded path
+
+                const cwd = payload.cwd ?? process.cwd()
 
                 if (!id) {
                     console.error(JSON.stringify({ ok: false, error: "Missing command ID" }))

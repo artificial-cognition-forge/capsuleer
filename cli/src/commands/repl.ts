@@ -3,6 +3,7 @@ import * as readline from "readline"
 import chalk from "chalk"
 import { join } from "path"
 import { fileURLToPath } from "url"
+import { homedir } from "os"
 
 type ModuleManifest = {
     module: string
@@ -26,9 +27,11 @@ type CapsuleEvent =
 export async function repl() {
     console.log(chalk.cyan.bold("\nCapsule\n"))
 
-    // Spawn the capsule process
-    const __dirname = fileURLToPath(new URL(".", import.meta.url))
-    const environmentPath = join(__dirname, "../environment")
+    const environmentPath = join(
+        homedir(),
+        ".capsuleer",
+        "environment"
+    )
 
     const capsule = spawn("bun", ["run", "index.ts"], {
         cwd: environmentPath,
