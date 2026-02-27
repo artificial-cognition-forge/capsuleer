@@ -15,33 +15,34 @@ type GrepMatch = { file: string; line: number; text: string; match: string }
 
 const fs = {
     async cwd() {
-        const path = await $`pwd`.json()
-
-        // const path = process.cwd()
-        console.log(JSON.stringify({
+        const path = process.cwd()
+        console.log({
             ok: true,
             op: "fs.cwd",
             data: { path }
-        }))
+        })
 
         return path
     },
 
-    async cd(path: string) {
+    async cd(path: string, opts: { log?: boolean } = { log: true }) {
         try {
             process.chdir(path)
-            console.log(JSON.stringify({
+
+            if (opts?.log === false) return
+
+            console.log({
                 ok: true,
                 op: "fs.cd",
                 data: { path, cwd: process.cwd() }
-            }))
+            })
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.cd",
                 data: { path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -62,15 +63,15 @@ const fs = {
                 }
             }
 
-            console.log(JSON.stringify(payload))
+            console.log(payload)
             return content
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.read",
                 data: { path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -78,7 +79,7 @@ const fs = {
     async write(path: string, content: string): Promise<void> {
         try {
             await writeFile(path, content, "utf8")
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.write",
                 data: {
@@ -86,14 +87,14 @@ const fs = {
                     bytes: Buffer.byteLength(content),
                     lines: content.split("\n").length
                 }
-            }))
+            })
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.write",
                 data: { path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -105,19 +106,19 @@ const fs = {
                 name: e.name,
                 type: e.isDirectory() ? "directory" : e.isFile() ? "file" : "other"
             }))
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.list",
                 data: { path, count: data.length, entries: data }
-            }))
+            })
             return entries.map(e => e.name)
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.list",
                 data: { path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -125,18 +126,18 @@ const fs = {
     async exists(path: string): Promise<boolean> {
         try {
             await access(path)
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.exists",
                 data: { path, exists: true }
-            }))
+            })
             return true
         } catch {
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.exists",
                 data: { path, exists: false }
-            }))
+            })
             return false
         }
     },
@@ -145,18 +146,18 @@ const fs = {
         try {
             await rm(path, { recursive: true, force: true })
 
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.delete",
                 data: { path, deleted: true }
-            }))
+            })
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.delete",
                 data: { path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -189,18 +190,18 @@ const fs = {
     async mkdir(path: string, opts: { recursive?: boolean } = { recursive: true }): Promise<void> {
         try {
             await mkdir(path, opts)
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.mkdir",
                 data: { path, recursive: opts.recursive ?? false }
-            }))
+            })
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.mkdir",
                 data: { path, recursive: opts.recursive ?? false },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -213,19 +214,19 @@ const fs = {
             for await (const file of glob.scan({ cwd, onlyFiles: true })) {
                 results.push(join(cwd, file))
             }
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.find",
                 data: { pattern, cwd, count: results.length, files: results }
-            }))
+            })
             return results
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.find",
                 data: { pattern, cwd: opts.cwd ?? "." },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
@@ -258,19 +259,19 @@ const fs = {
             }
 
             await searchPath(root)
-            console.log(JSON.stringify({
+            console.log({
                 ok: true,
                 op: "fs.grep",
                 data: { pattern, path, recursive: opts.recursive ?? false, matches: results.length }
-            }))
+            })
             return results
         } catch (err: any) {
-            console.log(JSON.stringify({
+            console.log({
                 ok: false,
                 op: "fs.grep",
                 data: { pattern, path },
                 error: err.message
-            }))
+            })
             throw err
         }
     },
