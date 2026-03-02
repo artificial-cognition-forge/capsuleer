@@ -63,7 +63,7 @@ export async function setup() {
             try {
                 const payload = JSON.parse(line)
 
-                const { id, type, code, stream = true, } = payload // TODO: remove this hardcoded path
+                const { id, type, code, stream = true, } = payload
 
                 const cwd = payload.cwd ?? process.cwd()
 
