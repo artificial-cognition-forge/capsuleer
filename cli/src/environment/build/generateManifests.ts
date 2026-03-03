@@ -51,6 +51,141 @@ function extractJSDoc(node: ts.Node, sourceFile: ts.SourceFile): string | undefi
 }
 
 /**
+ * Known complex types that should be simplified for AI consumption
+ * Maps type patterns to their simplified representations
+ */
+const SIMPLIFIED_TYPES: Record<string, string> = {
+    'TemplateStringsArray': 'TemplateStringsArray',
+    'RequestInit': 'RequestInit',
+    'Response': 'Response',
+    'Request': 'Request',
+    'Headers': 'Headers',
+    'FormData': 'FormData',
+    'Blob': 'Blob',
+    'ArrayBuffer': 'ArrayBuffer',
+    'ReadableStream': 'ReadableStream',
+    'WritableStream': 'WritableStream',
+    'AbortSignal': 'AbortSignal',
+    'URL': 'URL',
+    'URLSearchParams': 'URLSearchParams',
+}
+
+/**
+ * Check if a type should be simplified based on property count or complexity
+ */
+function shouldSimplifyType(type: ts.Type, typeString: string, properties: ts.Symbol[]): boolean {
+    // Simplify if type name matches known complex types
+    for (const knownType of Object.keys(SIMPLIFIED_TYPES)) {
+        if (typeString.includes(knownType)) {
+            return true
+        }
+    }
+
+    // Simplify objects with more than 8 properties (too verbose for AI)
+    if (properties.length > 8) {
+        return true
+    }
+
+    return false
+}
+
+/**
+ * Recursively expand a type to its full representation
+ * This handles object literals and arrays better than the default typeToString
+ * Simplifies complex built-in types for AI consumption
+ */
+function expandType(type: ts.Type, checker: ts.TypeChecker, depth = 0): string {
+    // Prevent infinite recursion
+    if (depth > 5) {
+        return 'any'
+    }
+
+    // First, try to get a clean type name with UseAliasDefinedOutsideCurrentScope
+    const typeStringWithAlias = checker.typeToString(
+        type,
+        undefined,
+        ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope
+    )
+
+    // Check for known simplified types using the alias-aware string
+    for (const [pattern, replacement] of Object.entries(SIMPLIFIED_TYPES)) {
+        if (typeStringWithAlias === pattern || typeStringWithAlias.startsWith(pattern + '<')) {
+            return typeStringWithAlias
+        }
+    }
+
+    const typeString = checker.typeToString(type)
+
+    // Check symbol name for global types
+    const symbol = type.getSymbol()
+    if (symbol) {
+        const symbolName = symbol.getName()
+        if (SIMPLIFIED_TYPES[symbolName]) {
+            return symbolName
+        }
+    }
+
+    // Handle arrays
+    if (checker.isArrayType(type)) {
+        const typeArgs = (type as ts.TypeReference).typeArguments
+        if (typeArgs && typeArgs.length > 0) {
+            const elemType = expandType(typeArgs[0], checker, depth + 1)
+            return `Array<${elemType}>`
+        }
+    }
+
+    // Handle promises
+    if (typeString.startsWith('Promise<')) {
+        const typeArgs = (type as ts.TypeReference).typeArguments
+        if (typeArgs && typeArgs.length > 0) {
+            const innerType = expandType(typeArgs[0], checker, depth + 1)
+            return `Promise<${innerType}>`
+        }
+    }
+
+    // Handle object literals with properties
+    const properties = type.getProperties()
+    if (properties.length > 0 && (type.flags & ts.TypeFlags.Object)) {
+        // Check if we should simplify this type
+        if (shouldSimplifyType(type, typeString, properties)) {
+            // For complex objects, use a simplified representation
+            if (typeString !== '{}') {
+                return typeString
+            }
+            // If it's just {}, show a hint about the structure
+            if (properties.length <= 3) {
+                const props = properties.slice(0, 3).map(prop => {
+                    const propName = prop.getName()
+                    return `${propName}: ...`
+                })
+                return `{ ${props.join('; ')}; ... }`
+            }
+            return 'object'
+        }
+
+        // Expand simple object types (8 or fewer properties)
+        const props = properties.map(prop => {
+            const propName = prop.getName()
+            const propType = checker.getTypeOfSymbol(prop)
+            const propTypeStr = expandType(propType, checker, depth + 1)
+            const isOptional = prop.flags & ts.SymbolFlags.Optional
+            return `${propName}${isOptional ? '?' : ''}: ${propTypeStr}`
+        })
+        return `{ ${props.join('; ')} }`
+    }
+
+    // Default: use typeToString with expansion flags
+    return checker.typeToString(
+        type,
+        undefined,
+        ts.TypeFormatFlags.NoTruncation |
+        ts.TypeFormatFlags.InTypeAlias |
+        ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope |
+        ts.TypeFormatFlags.WriteArrayAsGenericType
+    )
+}
+
+/**
  * Generate a TypeScript declaration string for a function signature
  */
 function generateFunctionDeclaration(
@@ -61,18 +196,14 @@ function generateFunctionDeclaration(
     const params = signature.parameters.map(param => {
         const paramName = param.getName()
         const paramType = checker.getTypeOfSymbol(param)
-        const typeString = checker.typeToString(paramType, undefined, ts.TypeFormatFlags.NoTruncation)
+        const typeString = expandType(paramType, checker)
         const isOptional = param.declarations?.some(d =>
             ts.isParameter(d) && d.questionToken !== undefined
         )
         return `${paramName}${isOptional ? '?' : ''}: ${typeString}`
     }).join(', ')
 
-    const returnType = checker.typeToString(
-        signature.getReturnType(),
-        undefined,
-        ts.TypeFormatFlags.NoTruncation
-    )
+    const returnType = expandType(signature.getReturnType(), checker)
 
     return `declare function ${name}(${params}): ${returnType}`
 }
@@ -92,7 +223,7 @@ function generatePropertyDeclaration(
         return generateFunctionDeclaration(name, callSignatures[0], checker)
     } else {
         // It's a value or namespace
-        const typeString = checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation)
+        const typeString = expandType(type, checker)
         return `declare const ${name}: ${typeString}`
     }
 }
@@ -118,9 +249,9 @@ function extractModuleManifest(filePath: string): ModuleManifest | null {
         strict: false,
         skipLibCheck: true,
         skipDefaultLibCheck: true,
-        noResolve: true, // Don't resolve imports - we only need local types
-        noLib: true, // Don't include default lib
-        moduleResolution: ts.ModuleResolutionKind.Node10
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        // Enable lib to get built-in types like Promise, Array, etc.
+        lib: ['ESNext']
     }
 
     const host = ts.createCompilerHost(compilerOptions)

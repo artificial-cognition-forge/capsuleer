@@ -1,8 +1,16 @@
 import { $ as bunShell, file as bunFile, write as bunWrite, fetch as bunFetch } from "bun"
 import { defineModule } from "../build/defineModule"
 
+/**
+ * Execute shell commands using tagged template literals.
+ * Returns stdout, stderr, and exit code.
+ *
+ * @example
+ * const result = await $`ls -la`
+ * console.log(result.stdout)
+ */
 type BunShell = (
-  strings: TemplateStringsArray,
+  template: TemplateStringsArray,
   ...values: any[]
 ) => Promise<{
   stdout: string
@@ -10,7 +18,18 @@ type BunShell = (
   exitCode: number
 }>
 
-type BunFetch = typeof fetch
+/**
+ * Fetch resources from the network (HTTP/HTTPS).
+ * Bun's implementation of the standard fetch API.
+ *
+ * @example
+ * const response = await fetch("https://api.example.com/data")
+ * const data = await response.json()
+ */
+type BunFetch = (
+  input: string | URL | Request,
+  init?: RequestInit
+) => Promise<Response>
 
 type BunRuntime = {
   $: BunShell
