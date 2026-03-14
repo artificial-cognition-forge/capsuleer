@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, rmSync, cpSync, readdirSync } from "fs"
 import { join } from "path"
 import { spawn } from "child_process"
 import { print } from "./print"
+import { generateManifestsForDir } from "./environment/build/generateManifests"
 
 function getCapsuleDir(): string {
     const home = process.env.HOME
@@ -98,6 +99,28 @@ export const capsule = {
         rmSync(targetDir, { recursive: true, force: true })
 
         print.success("Environment uninstalled")
+        print.blank()
+    },
+
+    async prepare() {
+        const targetDir = getEnvironmentDir()
+
+        if (!existsSync(targetDir)) {
+            print.dim("Environment not installed")
+            print.blank()
+            return
+        }
+
+        const modulesDir = join(targetDir, "modules")
+        if (!existsSync(modulesDir)) {
+            print.dim("No modules directory found")
+            print.blank()
+            return
+        }
+
+        generateManifestsForDir(modulesDir)
+        print.success("Manifests prepared")
+        print.path(join(modulesDir, ".manifests.cache.json"))
         print.blank()
     },
 

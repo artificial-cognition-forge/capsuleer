@@ -15,6 +15,11 @@ export async function main() {
             return
         }
 
+        if (command === "prepare") {
+            await cli.capsule.prepare()
+            return
+        }
+
         if (command === "module") {
             if (subcommand === "list") {
                 await cli.capsule.module.list()

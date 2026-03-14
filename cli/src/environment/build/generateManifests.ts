@@ -375,6 +375,50 @@ function isCacheValid(cacheFile: string, moduleFiles: string[]): boolean {
 }
 
 /**
+ * Generate manifests for all module files in a given modules directory.
+ * Uses caching to avoid regenerating on every boot.
+ */
+export function generateManifestsForDir(modulesDir: string): ModuleManifest[] {
+    const cacheFile = join(modulesDir, ".manifests.cache.json")
+    const files = readdirSync(modulesDir).filter(f => f.endsWith(".module.ts"))
+    const filePaths = files.map(f => join(modulesDir, f))
+
+    // Try to load from cache
+    if (isCacheValid(cacheFile, filePaths)) {
+        try {
+            const cached = JSON.parse(readFileSync(cacheFile, "utf-8"))
+            return cached as ModuleManifest[]
+        } catch {
+            // Cache read failed, regenerate
+        }
+    }
+
+    // Generate manifests
+    const manifests: ModuleManifest[] = []
+
+    for (const file of files) {
+        const filePath = join(modulesDir, file)
+        try {
+            const manifest = extractModuleManifest(filePath)
+            if (manifest) {
+                manifests.push(manifest)
+            }
+        } catch (error) {
+            console.error(`Error generating manifest for ${file}:`, error)
+        }
+    }
+
+    // Save to cache
+    try {
+        writeFileSync(cacheFile, JSON.stringify(manifests, null, 2), "utf-8")
+    } catch (error) {
+        // Cache write failed, not critical
+    }
+
+    return manifests
+}
+
+/**
  * Generate manifests for all module files in the modules directory
  * Uses caching to avoid regenerating on every boot
  */
